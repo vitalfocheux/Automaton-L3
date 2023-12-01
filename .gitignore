@@ -1,0 +1,7 @@
+.vscode/
+googletest/
+prepare-archive.sh
+testfa *.cc
+automate.*
+CMakeLists.txt
+build/
