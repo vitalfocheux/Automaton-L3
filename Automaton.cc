@@ -1915,4 +1915,9 @@ namespace fa {
   //   return Calculon;
   // }
 
+  Automaton Automaton::createMinimalHopcroft(const Automaton& automaton){
+    fa::Automaton res = automaton;
+    return res;
+  }
+
 }

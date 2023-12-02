@@ -18,8 +18,6 @@
 #include <time.h>
 
 #define N 500
-//#define DEVELOPMENT
-#define HOPCROFT
 
 std::set<std::string> words;
 
@@ -47,9 +45,38 @@ void enumer_chaines_abc(std::string& chaine, int n) {
   }
 }
 
+std::string reverse_string(std::string chaine){
+  std::string res;
+  std::size_t size = chaine.size();
+  for(std::size_t i = 0; i < size; ++i){
+    res = chaine.at(i) + res;
+  }
+  return res;
+}
+
 bool equivalent(const fa::Automaton a1, const fa::Automaton a2){
   for(std::string word : words){
     if(a1.match(word) != a2.match(word)){
+      return false;
+    }
+  }
+  return true;
+}
+
+bool equivalentComplement(const fa::Automaton fa, const fa::Automaton complement){
+  for(std::string word : words){
+    if(fa.match(word) == complement.match(word)){
+      std::cout << "Pour le mot : " << word << ", le complémentaire match celui de base\n";
+      return false;
+    }
+  }
+  return true;
+}
+
+bool equivalentMirror(const fa::Automaton fa, const fa::Automaton mirror){
+  for(std::string word : words){
+    if(fa.match(word) != mirror.match(reverse_string(word))){
+      std::cout << "Pour le mot : " << word << ", le mirroir ne match pas celui de base\n";
       return false;
     }
   }
@@ -83,6 +110,8 @@ TEST(isValid, withSymbolWithState){
   EXPECT_TRUE(fa.hasState(0));
   EXPECT_TRUE(fa.hasSymbol('a'));
 }
+
+
 
 TEST(AddedSymbol, Epsilon){
   fa::Automaton fa;
@@ -192,6 +221,8 @@ TEST(RemoveSymbol, allCharacter){
 
   EXPECT_EQ(fa.countSymbols(), 0u);
 }
+
+
 
 TEST(RemoveSymbol, SymbolInTransition){
   fa::Automaton fa;
@@ -313,6 +344,8 @@ TEST(AddState, MIN){
   EXPECT_FALSE(fa.hasState(INT_MIN));
   EXPECT_EQ(fa.countStates(), 0u);
 }
+
+
 
 TEST(RemoveState, Empty){
   fa::Automaton fa;
@@ -868,6 +901,8 @@ TEST(HasTransition, Success){
   EXPECT_TRUE(fa.hasTransition(0, 'a', 1));
 }
 
+
+
 TEST(CountTransition, Empty){
   fa::Automaton fa;
   EXPECT_EQ(fa.countTransitions(), 0u);
@@ -955,7 +990,6 @@ TEST(hasEpsilonTransition, withEpsilon){
   EXPECT_TRUE(fa.hasTransition(1, fa::Epsilon, 2));
   EXPECT_EQ(fa.countTransitions(), 2u);
 }
-
 TEST(hasEpsilonTransition, Twice){
   fa::Automaton fa;
 
@@ -1298,6 +1332,8 @@ TEST(isDeterminist, alreadyDeterministAndCreateMinimalMoore){
   EXPECT_TRUE(moore.hasSymbol('b'));
   EXPECT_EQ(moore.countSymbols(), 2u);
 }
+
+
 
 TEST(isDeterminist, alreadyDeterministAndCreateMinimalBrzozowski){
   fa::Automaton fa;
@@ -1689,11 +1725,20 @@ TEST(createComplement, notCompleteAndAlreadyDeterminist){
 
   n_fa = fa::Automaton::createComplement(fa);
 
+  words = {};
+  std::size_t size = fa.countStates();
+  for(std::size_t i = 1; i < size + 1; ++i){
+    std::string chaine;
+    enumer_chaines(chaine, i);
+  }
+  words.insert("");
+
   EXPECT_TRUE(n_fa.isValid());
   EXPECT_FALSE(n_fa.isLanguageEmpty());
   EXPECT_EQ(n_fa.countSymbols(), 2u);
   EXPECT_TRUE(n_fa.hasSymbol('a'));
   EXPECT_TRUE(n_fa.hasSymbol('b'));
+  EXPECT_TRUE(equivalentComplement(fa, n_fa));
 }
 
 TEST(createComplement, AlreadyCompleteAndAlreadyDeterminist){
@@ -1718,11 +1763,20 @@ TEST(createComplement, AlreadyCompleteAndAlreadyDeterminist){
 
   n_fa = fa::Automaton::createComplement(fa);
 
+  words = {};
+  std::size_t size = fa.countStates();
+  for(std::size_t i = 1; i < size + 1; ++i){
+    std::string chaine;
+    enumer_chaines(chaine, i);
+  }
+  words.insert("");
+
   EXPECT_TRUE(n_fa.isValid());
   EXPECT_FALSE(n_fa.isLanguageEmpty());
   EXPECT_EQ(n_fa.countSymbols(), 2u);
   EXPECT_TRUE(n_fa.hasSymbol('a'));
   EXPECT_TRUE(n_fa.hasSymbol('b'));
+  EXPECT_TRUE(equivalentComplement(fa, n_fa));
 }
 
 TEST(createComplement, NotCompleteAndNotDeterminist){
@@ -1742,11 +1796,20 @@ TEST(createComplement, NotCompleteAndNotDeterminist){
 
   n_fa = fa::Automaton::createComplement(fa);
 
+  words = {};
+  std::size_t size = fa.countStates();
+  for(std::size_t i = 1; i < size + 1; ++i){
+    std::string chaine;
+    enumer_chaines(chaine, i);
+  }
+  words.insert("");
+
   EXPECT_TRUE(n_fa.isValid());
   EXPECT_FALSE(n_fa.isLanguageEmpty());
   EXPECT_EQ(n_fa.countSymbols(), 2u);
   EXPECT_TRUE(n_fa.hasSymbol('a'));
   EXPECT_TRUE(n_fa.hasSymbol('b'));
+  EXPECT_TRUE(equivalentComplement(fa, n_fa));
 }
 
 TEST(createComplement, noInitialState){
@@ -1765,11 +1828,20 @@ TEST(createComplement, noInitialState){
 
   n_fa = fa::Automaton::createComplement(fa);
 
+  words = {};
+  std::size_t size = fa.countStates();
+  for(std::size_t i = 1; i < size + 1; ++i){
+    std::string chaine;
+    enumer_chaines(chaine, i);
+  }
+  words.insert("");
+
   EXPECT_TRUE(n_fa.isValid());
   EXPECT_FALSE(n_fa.isLanguageEmpty());
   EXPECT_EQ(n_fa.countSymbols(), 2u);
   EXPECT_TRUE(n_fa.hasSymbol('a'));
   EXPECT_TRUE(n_fa.hasSymbol('b'));
+  EXPECT_TRUE(equivalentComplement(fa, n_fa));
 }
 
 TEST(createComplement, multipleInitialState){
@@ -1799,11 +1871,20 @@ TEST(createComplement, multipleInitialState){
 
   n_fa = fa::Automaton::createComplement(fa);
 
+  words = {};
+  std::size_t size = fa.countStates();
+  for(std::size_t i = 1; i < size + 1; ++i){
+    std::string chaine;
+    enumer_chaines(chaine, i);
+  }
+  words.insert("");
+
   EXPECT_TRUE(n_fa.isValid());
   EXPECT_FALSE(n_fa.isLanguageEmpty());
   EXPECT_EQ(n_fa.countSymbols(), 2u);
   EXPECT_TRUE(n_fa.hasSymbol('a'));
   EXPECT_TRUE(n_fa.hasSymbol('b'));
+  EXPECT_TRUE(equivalentComplement(fa, n_fa));
 }
 
 TEST(createMirror, Empty){
@@ -1814,12 +1895,21 @@ TEST(createMirror, Empty){
 
   n_fa = fa::Automaton::createMirror(fa);
 
+  words = {};
+  std::size_t size = fa.countStates();
+  for(std::size_t i = 1; i < size + 1; ++i){
+    std::string chaine;
+    enumer_chaines(chaine, i);
+  }
+  words.insert("");
+
   EXPECT_TRUE(n_fa.isValid());
   EXPECT_TRUE(n_fa.isLanguageEmpty());
   EXPECT_EQ(n_fa.countStates(), 1u);
   EXPECT_EQ(n_fa.countSymbols(), 1u);
   EXPECT_TRUE(n_fa.hasSymbol('a'));
   EXPECT_EQ(n_fa.countTransitions(), 0u);
+  EXPECT_TRUE(equivalentMirror(fa, n_fa));
 }
 
 TEST(createMirror, mirror){
@@ -1833,13 +1923,24 @@ TEST(createMirror, mirror){
 
   n_fa = fa::Automaton::createMirror(fa);
 
+  words = {};
+  std::size_t size = fa.countStates();
+  for(std::size_t i = 1; i < size + 1; ++i){
+    std::string chaine;
+    enumer_chaines(chaine, i);
+  }
+  words.insert("");
+
   EXPECT_TRUE(n_fa.isValid());
   EXPECT_FALSE(n_fa.isLanguageEmpty());
   EXPECT_EQ(n_fa.countStates(), 2u);
   EXPECT_EQ(n_fa.countSymbols(), 1u);
   EXPECT_TRUE(n_fa.hasSymbol('a'));
   EXPECT_EQ(n_fa.countTransitions(), 1u);
+  EXPECT_TRUE(equivalentMirror(fa, n_fa));
 }
+
+
 
 TEST(createMirror, deterministicAndNotCompleteWithMultipleFinalState){
   fa::Automaton fa;
@@ -1860,6 +1961,14 @@ TEST(createMirror, deterministicAndNotCompleteWithMultipleFinalState){
 
   fa::Automaton n_fa = fa::Automaton::createMirror(fa);
 
+  words = {};
+  std::size_t size = fa.countStates();
+  for(std::size_t i = 1; i < size + 1; ++i){
+    std::string chaine;
+    enumer_chaines(chaine, i);
+  }
+  words.insert("");
+
   EXPECT_TRUE(n_fa.isValid());
   EXPECT_FALSE(n_fa.isLanguageEmpty());
   EXPECT_EQ(n_fa.countStates(), 3u);
@@ -1867,6 +1976,7 @@ TEST(createMirror, deterministicAndNotCompleteWithMultipleFinalState){
   EXPECT_TRUE(n_fa.hasSymbol('a'));
   EXPECT_TRUE(n_fa.hasSymbol('b'));
   EXPECT_EQ(n_fa.countTransitions(), 2u);
+  EXPECT_TRUE(equivalentMirror(fa, n_fa));
 }
 
 TEST(createMirror, deterministicAndNotCompleteWithOneFinalState){
@@ -1887,6 +1997,14 @@ TEST(createMirror, deterministicAndNotCompleteWithOneFinalState){
 
   fa::Automaton n_fa = fa::Automaton::createMirror(fa);
 
+  words = {};
+  std::size_t size = fa.countStates();
+  for(std::size_t i = 1; i < size + 1; ++i){
+    std::string chaine;
+    enumer_chaines(chaine, i);
+  }
+  words.insert("");
+
   EXPECT_TRUE(n_fa.isValid());
   EXPECT_FALSE(n_fa.isLanguageEmpty());
   EXPECT_EQ(n_fa.countStates(), 3u);
@@ -1894,6 +2012,7 @@ TEST(createMirror, deterministicAndNotCompleteWithOneFinalState){
   EXPECT_TRUE(n_fa.hasSymbol('a'));
   EXPECT_TRUE(n_fa.hasSymbol('b'));
   EXPECT_EQ(n_fa.countTransitions(), 2u);
+  EXPECT_TRUE(equivalentMirror(fa, n_fa));
 }
 
 TEST(createMirror, notDeterministicAndComplete){
@@ -1920,6 +2039,14 @@ TEST(createMirror, notDeterministicAndComplete){
 
   fa::Automaton n_fa = fa::Automaton::createMirror(fa);
 
+  words = {};
+  std::size_t size = fa.countStates();
+  for(std::size_t i = 1; i < size + 1; ++i){
+    std::string chaine;
+    enumer_chaines(chaine, i);
+  }
+  words.insert("");
+
   EXPECT_TRUE(n_fa.isValid());
   EXPECT_FALSE(n_fa.isLanguageEmpty());
   EXPECT_EQ(n_fa.countStates(), 3u);
@@ -1927,6 +2054,7 @@ TEST(createMirror, notDeterministicAndComplete){
   EXPECT_TRUE(n_fa.hasSymbol('a'));
   EXPECT_TRUE(n_fa.hasSymbol('b'));
   EXPECT_EQ(n_fa.countTransitions(), 7u);
+  EXPECT_TRUE(equivalentMirror(fa, n_fa));
 }
 
 TEST(makeTransition, noTransition){
@@ -3640,7 +3768,6 @@ TEST(createDeterministic, DS2022){
   EXPECT_TRUE(deter.hasSymbol('a'));
   EXPECT_TRUE(deter.hasSymbol('b'));
   EXPECT_TRUE(equivalent(fa, deter));
-  deter.dotPrint(std::cout);
 }
 
 TEST(createDeterministic, exemplePDF){
@@ -4233,130 +4360,75 @@ TEST(createMinimalMoore, NonAccessibleState){
   EXPECT_TRUE(n.isComplete());
   EXPECT_TRUE(equivalent(fa, n));
 }
-/*
-TEST(createMinimalMoore, aléatoire) {
-  // Un automate avec un grand nombre d'états et de symboles accepte un langage complexe.
-  fa::Automaton automaton;
-  srand(time(NULL));
-  for (int i = 0; i < 10; i++) {
-    automaton.addState(i);
-    for (char c = 'a'; c <= 'c'; c++) {
-      automaton.addSymbol(c);
-    }
+
+TEST(createMinimalMoore, NonAccessibleStatesWithTransition){
+  fa::Automaton fa;
+
+  EXPECT_TRUE(fa.addState(0));
+  EXPECT_TRUE(fa.addState(1));
+  EXPECT_TRUE(fa.addState(2));
+  EXPECT_TRUE(fa.addSymbol('a'));
+  EXPECT_TRUE(fa.addTransition(0, 'a', 0));
+  EXPECT_TRUE(fa.addTransition(1, 'a', 2));
+  EXPECT_TRUE(fa.addTransition(2, 'a', 1));
+  fa.setStateInitial(0);
+  fa.setStateFinal(0);
+
+  std::size_t size = fa.countStates();
+  words = {};
+  for(std::size_t i = 1; i < size + 1; ++i){
+    std::string chaine;
+    enumer_chaines(chaine, i);
   }
+  words.insert("");
 
-  // On génère les transitions de l'automate de manière aléatoire.
-  for (int i = 0; i < 10; i++) {
-    for (int j = 0; j < (int)'d'; j++) {
-      int next_state = rand() % 10;
-      automaton.addTransition(i, 'a' + j, next_state);
-    }
-  }
-
-  // On choisit un état initial aléatoire.
-  int initial_state = rand() % 10;
-  automaton.setStateInitial(initial_state);
-
-  // On choisit un état final aléatoire.
-  int final_state = rand() % 10;
-  automaton.setStateFinal(final_state);
-
-  fa::Automaton minimal = fa::Automaton::createMinimalMoore(automaton);
-
-  EXPECT_TRUE(minimal.isValid());
-  EXPECT_EQ(minimal.countSymbols(), 3u);
-  EXPECT_TRUE(minimal.hasSymbol('a'));
-  EXPECT_TRUE(minimal.hasSymbol('b'));
-  EXPECT_TRUE(minimal.hasSymbol('c'));
-  EXPECT_TRUE(minimal.isDeterministic());
-  EXPECT_TRUE(minimal.isComplete());
-
-  int k = 0;
-  for(std::string word : words){
-    if(automaton.match(word)){
-      ++k;
-    }
-  } 
-
-  int j = 0;
-  for(std::string word : words){
-    if(minimal.match(word)){
-      ++j;
-    }
-  }
-
-  EXPECT_EQ(k, j);
+  fa::Automaton n = fa::Automaton::createMinimalMoore(fa);
+  n.prettyPrint(std::cout);
+  EXPECT_TRUE(n.isValid());
+  EXPECT_FALSE(n.isLanguageEmpty());
+  EXPECT_EQ(n.countStates(), 1u);
+  EXPECT_EQ(n.countSymbols(), 1u);
+  EXPECT_TRUE(n.hasSymbol('a'));
+  EXPECT_TRUE(n.isDeterministic());
+  EXPECT_TRUE(n.isComplete());
+  EXPECT_TRUE(equivalent(fa, n));
 }
 
-TEST(createMinimalMoore, MultipleAléatoire) {
-  for(int i = 0; i < N; ++i){
-    // Un automate avec un grand nombre d'états et de symboles accepte un langage complexe.
-    fa::Automaton automaton;
-    srand(time(NULL));
-    for (int i = 0; i < 10; i++) {
-      automaton.addState(i);
-      
-    }
+TEST(createMinimalMoore, NonAccessibleStatesWithTransitionNonDeterminist){
+  fa::Automaton fa;
 
-    for (char c = 'a'; c <= 'c'; c++) {
-      automaton.addSymbol(c);
-    }
+  EXPECT_TRUE(fa.addState(0));
+  EXPECT_TRUE(fa.addState(1));
+  EXPECT_TRUE(fa.addState(2));
+  EXPECT_TRUE(fa.addSymbol('a'));
+  EXPECT_TRUE(fa.addSymbol('b'));
+  EXPECT_TRUE(fa.addTransition(0, 'a', 0));
+  EXPECT_TRUE(fa.addTransition(0, 'b', 0));
+  EXPECT_TRUE(fa.addTransition(1, 'a', 2));
+  EXPECT_TRUE(fa.addTransition(2, 'a', 1));
+  fa.setStateInitial(0);
+  fa.setStateFinal(0);
 
-    // On génère les transitions de l'automate de manière aléatoire.
-    for (int i = 0; i < 10; i++) {
-      for (int j = 0; j < (int)'d'; j++) {
-        int next_state = rand() % 10;
-        automaton.addTransition(i, 'a' + j, next_state);
-      }
-    }
-
-    // On choisit un état initial aléatoire.
-    int initial_state = rand() % 10;
-    automaton.setStateInitial(initial_state);
-
-    // On choisit un état final aléatoire.
-    int final_state = rand() % 10;
-    automaton.setStateFinal(final_state);
-
-    //automaton.prettyPrint(std::cout);
-
-    fa::Automaton minimal = fa::Automaton::createMinimalMoore(automaton);
-
-    EXPECT_TRUE(minimal.isValid());
-    EXPECT_EQ(minimal.countSymbols(), 3u);
-    EXPECT_TRUE(minimal.hasSymbol('a'));
-    EXPECT_TRUE(minimal.hasSymbol('b'));
-    EXPECT_TRUE(minimal.hasSymbol('c'));
-    if(minimal.countStates() == 1u){
-      if(initial_state == final_state){
-        EXPECT_TRUE(minimal.isDeterministic());
-      }else{
-        EXPECT_FALSE(minimal.isDeterministic());
-      }
-      
-      EXPECT_FALSE(minimal.isComplete());
-    }else{
-      EXPECT_TRUE(minimal.isDeterministic());
-      EXPECT_TRUE(minimal.isComplete());
-    }      
-
-    int k = 0;
-    for(std::string word : words){
-      if(automaton.match(word)){
-        ++k;
-      }
-    } 
-
-    int j = 0;
-    for(std::string word : words){
-      if(minimal.match(word)){
-        ++j;
-      }
-    }
-
-    EXPECT_EQ(k, j);
+  std::size_t size = fa.countStates();
+  words = {};
+  for(std::size_t i = 1; i < size + 1; ++i){
+    std::string chaine;
+    enumer_chaines(chaine, i);
   }
-}*/
+  words.insert("");
+
+  fa::Automaton n = fa::Automaton::createMinimalMoore(fa);
+  n.prettyPrint(std::cout);
+  EXPECT_TRUE(n.isValid());
+  EXPECT_FALSE(n.isLanguageEmpty());
+  EXPECT_EQ(n.countStates(), 1u);
+  EXPECT_EQ(n.countSymbols(), 2u);
+  EXPECT_TRUE(n.hasSymbol('a'));
+  EXPECT_TRUE(n.hasSymbol('b'));
+  EXPECT_TRUE(n.isDeterministic());
+  EXPECT_TRUE(n.isComplete());
+  EXPECT_TRUE(equivalent(fa, n));
+}
 
 TEST(createMinimalBrzozowski, exempleCours){
   fa::Automaton fa;
@@ -4487,7 +4559,6 @@ TEST(createMinimalBrzozowski, noFinalState){
 
   fa::Automaton n = fa::Automaton::createMinimalBrzozowski(fa);
 
-  n.prettyPrint(std::cout);
   EXPECT_TRUE(n.isValid());
   EXPECT_TRUE(n.isLanguageEmpty());
   EXPECT_EQ(n.countStates(), 1u);
@@ -4532,7 +4603,6 @@ TEST(createMinimalBrzozowski, DS2022_Exo_Deter){
   words.insert("");
 
   fa::Automaton n = fa::Automaton::createMinimalBrzozowski(fa);
-  n.prettyPrint(std::cout);
   EXPECT_TRUE(n.isValid());
   EXPECT_FALSE(n.isLanguageEmpty());
   EXPECT_EQ(n.countStates(), 15u);
@@ -4642,464 +4712,6 @@ TEST(createMinimalBrzozowski, NonAccessibleStatesWithTransitionNonDeterminist){
   EXPECT_TRUE(n.isComplete());
   EXPECT_TRUE(equivalent(fa, n));
 }
-
-#ifdef DEVELOPMENT
-
-/*TEST(createMinimalBrzozowski, aléatoire) {
-  // Un automate avec un grand nombre d'états et de symboles accepte un langage complexe.
-  fa::Automaton automaton;
-  srand(time(NULL));
-  for (int i = 0; i < 10; i++) {
-    automaton.addState(i);
-    for (char c = 'a'; c <= 'c'; c++) {
-      automaton.addSymbol(c);
-    }
-  }
-
-  // On génère les transitions de l'automate de manière aléatoire.
-  for (int i = 0; i < 10; i++) {
-    for (int j = 0; j < (int)'d'; j++) {
-      int next_state = rand() % 10;
-      automaton.addTransition(i, 'a' + j, next_state);
-    }
-  }
-
-  // On choisit un état initial aléatoire.
-  int initial_state = rand() % 10;
-  automaton.setStateInitial(initial_state);
-
-  // On choisit un état final aléatoire.
-  int final_state = rand() % 10;
-  automaton.setStateFinal(final_state);
-
-  //automaton.prettyPrint(std::cout);
-
-  fa::Automaton minimal = fa::Automaton::createMinimalBrzozowski(automaton);
-
-  EXPECT_TRUE(minimal.isValid());
-  EXPECT_EQ(minimal.countSymbols(), 3u);
-  EXPECT_TRUE(minimal.hasSymbol('a'));
-  EXPECT_TRUE(minimal.hasSymbol('b'));
-  EXPECT_TRUE(minimal.hasSymbol('c'));
-  if(minimal.countStates() == 1u){
-      if(initial_state == final_state){
-        EXPECT_TRUE(minimal.isDeterministic());
-      }else{
-        EXPECT_FALSE(minimal.isDeterministic());
-      }
-      
-      EXPECT_FALSE(minimal.isComplete());
-    }else{
-      EXPECT_TRUE(minimal.isDeterministic());
-      EXPECT_TRUE(minimal.isComplete());
-    }   
-  
-
-  int k = 0;
-  for(std::string word : words){
-    if(automaton.match(word)){
-      ++k;
-    }
-  } 
-
-  int j = 0;
-  for(std::string word : words){
-    if(minimal.match(word)){
-      ++j;
-    }
-  }
-
-  EXPECT_EQ(k, j);
-}
-*/
-TEST(createMinimalBrzozowski, MultipleAléatoire) {
-  for(int i = 0; i < N; ++i){
-    // Un automate avec un grand nombre d'états et de symboles accepte un langage complexe.
-    fa::Automaton automaton;
-    srand(time(NULL));
-    for (int i = 0; i < 10; i++) {
-      automaton.addState(i);
-      
-    }
-
-    for (char c = 'a'; c <= 'c'; c++) {
-      automaton.addSymbol(c);
-    }
-
-    // On génère les transitions de l'automate de manière aléatoire.
-    for (int i = 0; i < 10; i++) {
-      for (int j = 0; j < (int)'d'; j++) {
-        int next_state = rand() % 10;
-        automaton.addTransition(i, 'a' + j, next_state);
-      }
-    }
-
-    // On choisit un état initial aléatoire.
-    int initial_state = rand() % 10;
-    automaton.setStateInitial(initial_state);
-
-    // On choisit un état final aléatoire.
-    int final_state = rand() % 10;
-    automaton.setStateFinal(final_state);
-
-    //automaton.prettyPrint(std::cout);
-
-    
-    
-
-    fa::Automaton minimal = fa::Automaton::createMinimalBrzozowski(automaton);
-
-    
-
-    words = {};
-    std::size_t size = automaton.countStates();
-    for(std::size_t i = 1; i < size + 1; ++i){
-      std::string chaine;
-      enumer_chaines_abc(chaine, i);
-    }
-    words.insert("");
-
-    EXPECT_TRUE(minimal.isValid());
-    EXPECT_EQ(minimal.countSymbols(), 3u);
-    EXPECT_TRUE(minimal.hasSymbol('a'));
-    EXPECT_TRUE(minimal.hasSymbol('b'));
-    EXPECT_TRUE(minimal.hasSymbol('c'));  
-
-    EXPECT_TRUE(minimal.isComplete());
-    EXPECT_TRUE(minimal.isDeterministic()); 
-    EXPECT_TRUE(equivalent(automaton, minimal));
-    
-  }
-}
-
-/*TEST(Aléatoire, CompareMooreBrzozowski) {
-  for(int i = 0; i < N; ++i){
-    // Un automate avec un grand nombre d'états et de symboles accepte un langage complexe.
-    fa::Automaton automaton;
-    srand(time(NULL));
-    for (int i = 0; i < 10; i++) {
-      automaton.addState(i);
-      
-    }
-
-    for (char c = 'a'; c <= 'c'; c++) {
-      automaton.addSymbol(c);
-    }
-
-    // On génère les transitions de l'automate de manière aléatoire.
-    for (int i = 0; i < 10; i++) {
-      for (int j = 0; j < (int)'d'; j++) {
-        int next_state = rand() % 10;
-        automaton.addTransition(i, 'a' + j, next_state);
-      }
-    }
-
-    // On choisit un état initial aléatoire.
-    int initial_state = rand() % 10;
-    automaton.setStateInitial(initial_state);
-
-    // On choisit un état final aléatoire.
-    int final_state = rand() % 10;
-    automaton.setStateFinal(final_state);
-
-    //automaton.prettyPrint(std::cout);
-
-    
-    
-
-    fa::Automaton minimalB = fa::Automaton::createMinimalBrzozowski(automaton);
-    fa::Automaton minimalM = fa::Automaton::createMinimalMoore(automaton);
-
-    EXPECT_TRUE(minimalB.isValid());
-    EXPECT_EQ(minimalB.countSymbols(), 3u);
-    EXPECT_TRUE(minimalB.hasSymbol('a'));
-    EXPECT_TRUE(minimalB.hasSymbol('b'));
-    EXPECT_TRUE(minimalB.hasSymbol('c'));
-    if(minimalB.countStates() == 1u){
-      if(initial_state == final_state){
-        EXPECT_TRUE(minimalB.isDeterministic());
-      }else{
-        EXPECT_FALSE(minimalB.isDeterministic());
-      }
-      
-      EXPECT_FALSE(minimalB.isComplete());
-    }else{
-      EXPECT_TRUE(minimalB.isDeterministic());
-      EXPECT_TRUE(minimalB.isComplete());
-    }     
-
-    EXPECT_TRUE(minimalM.isValid());
-    EXPECT_EQ(minimalM.countSymbols(), 3u);
-    EXPECT_TRUE(minimalM.hasSymbol('a'));
-    EXPECT_TRUE(minimalM.hasSymbol('b'));
-    EXPECT_TRUE(minimalM.hasSymbol('c'));
-    if(minimalM.countStates() == 1u){
-      if(initial_state == final_state){
-        EXPECT_TRUE(minimalM.isDeterministic());
-      }else{
-        EXPECT_FALSE(minimalM.isDeterministic());
-      }
-      
-      EXPECT_FALSE(minimalM.isComplete());
-    }else{
-      EXPECT_TRUE(minimalM.isDeterministic());
-      EXPECT_TRUE(minimalM.isComplete());
-    }     
-
-    int k = 0;
-    for(std::string word : words){
-      if(automaton.match(word)){
-        ++k;
-      }
-    } 
-
-    int j = 0;
-    for(std::string word : words){
-      if(minimalB.match(word)){
-        ++j;
-      }
-    }
-
-    int l = 0;
-    for(std::string word : words){
-      if(minimalM.match(word)){
-        ++l;
-      }
-    }
-
-
-    EXPECT_EQ(k, j);
-    EXPECT_EQ(k, l);
-    
-  }
-}
-*/
-#endif // DEVELOPMENT
-
-#ifdef HOPCROFT
-
-TEST(createMinimalHopcroft, exempleCours){
-  fa::Automaton fa;
-
-  EXPECT_TRUE(fa.addState(0));
-  EXPECT_TRUE(fa.addState(1));
-  EXPECT_TRUE(fa.addState(2));
-  EXPECT_TRUE(fa.addState(3));
-  EXPECT_TRUE(fa.addState(4));
-  EXPECT_TRUE(fa.addState(5));
-  EXPECT_TRUE(fa.addSymbol('a'));
-  EXPECT_TRUE(fa.addSymbol('b'));
-  EXPECT_TRUE(fa.addTransition(0, 'a', 1));
-  EXPECT_TRUE(fa.addTransition(0, 'b', 2));
-  EXPECT_TRUE(fa.addTransition(1, 'a', 2));
-  EXPECT_TRUE(fa.addTransition(1, 'b', 3));
-  EXPECT_TRUE(fa.addTransition(2, 'a', 1));
-  EXPECT_TRUE(fa.addTransition(2, 'b', 4));
-  EXPECT_TRUE(fa.addTransition(3, 'a', 4));
-  EXPECT_TRUE(fa.addTransition(3, 'b', 5));
-  EXPECT_TRUE(fa.addTransition(4, 'a', 3));
-  EXPECT_TRUE(fa.addTransition(4, 'b', 5));
-  EXPECT_TRUE(fa.addTransition(5, 'a', 5));
-  EXPECT_TRUE(fa.addTransition(5, 'b', 5));
-  fa.setStateInitial(0);
-  fa.setStateFinal(3);
-  fa.setStateFinal(4);
-
-  std::size_t size = fa.countStates();
-  words = {};
-  for(std::size_t i = 1; i < size + 1; ++i){
-    std::string chaine;
-    enumer_chaines(chaine, i);
-  }
-  words.insert("");
-
-  fa::Automaton n = fa::Automaton::createMinimalHopcroft(fa);
-
-  EXPECT_TRUE(n.isValid());
-  EXPECT_FALSE(n.isLanguageEmpty());
-  EXPECT_EQ(n.countStates(), 4u);
-  EXPECT_EQ(n.countSymbols(), 2u);
-  EXPECT_TRUE(n.hasSymbol('a'));
-  EXPECT_TRUE(n.hasSymbol('b'));
-  EXPECT_TRUE(n.isDeterministic());
-  EXPECT_TRUE(n.isComplete());
-  EXPECT_TRUE(equivalent(fa, n));
-}
-
-TEST(createMinimalHopcroft, alreadyCompleteAndAlreadyDeterministic){
-  fa::Automaton fa;
-
-  EXPECT_TRUE(fa.addState(0));
-  EXPECT_TRUE(fa.addState(1));
-  EXPECT_TRUE(fa.addState(2));
-  EXPECT_TRUE(fa.addState(3));
-  EXPECT_TRUE(fa.addState(4));
-  EXPECT_TRUE(fa.addState(5));
-  EXPECT_TRUE(fa.addSymbol('a'));
-  EXPECT_TRUE(fa.addSymbol('b'));
-  EXPECT_TRUE(fa.addTransition(0, 'a', 1));
-  EXPECT_TRUE(fa.addTransition(0, 'b', 2));
-  EXPECT_TRUE(fa.addTransition(1, 'a', 2));
-  EXPECT_TRUE(fa.addTransition(1, 'b', 3));
-  EXPECT_TRUE(fa.addTransition(2, 'a', 1));
-  EXPECT_TRUE(fa.addTransition(2, 'b', 4));
-  EXPECT_TRUE(fa.addTransition(3, 'a', 4));
-  EXPECT_TRUE(fa.addTransition(3, 'b', 5));
-  EXPECT_TRUE(fa.addTransition(4, 'a', 3));
-  EXPECT_TRUE(fa.addTransition(4, 'b', 5));
-  EXPECT_TRUE(fa.addTransition(5, 'a', 5));
-  EXPECT_TRUE(fa.addTransition(5, 'b', 5));
-  fa.setStateInitial(0);
-  fa.setStateFinal(3);
-  fa.setStateFinal(4);
-
-  std::size_t size = fa.countStates();
-  words = {};
-  for(std::size_t i = 1; i < size + 1; ++i){
-    std::string chaine;
-    enumer_chaines(chaine, i);
-  }
-  words.insert("");
-
-  fa::Automaton n = fa::Automaton::createMinimalHopcroft(fa);
-
-  EXPECT_TRUE(n.isValid());
-  EXPECT_FALSE(n.isLanguageEmpty());
-  EXPECT_EQ(n.countStates(), 4u);
-  EXPECT_EQ(n.countSymbols(), 2u);
-  EXPECT_TRUE(n.hasSymbol('a'));
-  EXPECT_TRUE(n.hasSymbol('b'));
-  EXPECT_TRUE(n.isDeterministic());
-  EXPECT_TRUE(n.isComplete());
-  EXPECT_TRUE(equivalent(fa, n));
-}
-
-TEST(createMinimalHopcroft, alreadyMinimal_ex18_1TD){
-  fa::Automaton fa;
-
-  EXPECT_TRUE(fa.addState(0));
-  EXPECT_TRUE(fa.addState(1));
-  EXPECT_TRUE(fa.addState(2));
-  EXPECT_TRUE(fa.addState(3));
-  EXPECT_TRUE(fa.addState(4));
-  EXPECT_TRUE(fa.addState(5));
-  EXPECT_TRUE(fa.addSymbol('a'));
-  EXPECT_TRUE(fa.addSymbol('b'));
-  EXPECT_TRUE(fa.addSymbol('c'));
-  EXPECT_TRUE(fa.addTransition(0, 'a', 1));
-  EXPECT_TRUE(fa.addTransition(0, 'b', 2));
-  EXPECT_TRUE(fa.addTransition(0, 'b', 4));
-  EXPECT_TRUE(fa.addTransition(0, 'c', 5));
-  EXPECT_TRUE(fa.addTransition(1, 'b', 0));
-  EXPECT_TRUE(fa.addTransition(2, 'c', 0));
-  EXPECT_TRUE(fa.addTransition(3, 'b', 4));
-  EXPECT_TRUE(fa.addTransition(3, 'c', 5));
-  EXPECT_TRUE(fa.addTransition(4, 'b', 3));
-  EXPECT_TRUE(fa.addTransition(5, 'a', 3));
-  fa.setStateInitial(0);
-  fa.setStateFinal(0);
-  fa.setStateFinal(3);
-
-  std::size_t size = fa.countStates();
-  words = {};
-  for(std::size_t i = 1; i < size + 1; ++i){
-    std::string chaine;
-    enumer_chaines(chaine, i);
-  }
-  words.insert("");
-
-  fa::Automaton minim = fa::Automaton::createMinimalHopcroft(fa);
-
-  EXPECT_TRUE(minim.isValid());
-  EXPECT_FALSE(minim.isLanguageEmpty());
-  EXPECT_EQ(minim.countStates(), 7u);
-  EXPECT_EQ(minim.countSymbols(), 3u);
-  EXPECT_TRUE(minim.hasSymbol('a'));
-  EXPECT_TRUE(minim.hasSymbol('b'));
-  EXPECT_TRUE(minim.hasSymbol('c'));
-  EXPECT_TRUE(minim.isDeterministic());
-  EXPECT_TRUE(minim.isComplete());
-  EXPECT_TRUE(equivalent(fa, minim));
-}
-
-TEST(createMinimalHopcroft, noInitialState){
-  fa::Automaton fa;
-  
-  EXPECT_TRUE(fa.addState(0));
-  EXPECT_TRUE(fa.addState(1));
-  EXPECT_TRUE(fa.addState(2));
-  EXPECT_TRUE(fa.addState(3));
-  EXPECT_TRUE(fa.addState(4));
-  EXPECT_TRUE(fa.addState(5));
-  EXPECT_TRUE(fa.addSymbol('a'));
-  EXPECT_TRUE(fa.addSymbol('b'));
-  EXPECT_TRUE(fa.addTransition(0, 'a', 1));
-  EXPECT_TRUE(fa.addTransition(0, 'b', 2));
-  EXPECT_TRUE(fa.addTransition(1, 'a', 2));
-  EXPECT_TRUE(fa.addTransition(1, 'b', 3));
-  EXPECT_TRUE(fa.addTransition(2, 'a', 1));
-  EXPECT_TRUE(fa.addTransition(2, 'b', 4));
-  EXPECT_TRUE(fa.addTransition(3, 'a', 4));
-  EXPECT_TRUE(fa.addTransition(3, 'b', 5));
-  EXPECT_TRUE(fa.addTransition(4, 'a', 3));
-  EXPECT_TRUE(fa.addTransition(4, 'b', 5));
-  EXPECT_TRUE(fa.addTransition(5, 'a', 5));
-  EXPECT_TRUE(fa.addTransition(5, 'b', 5));
-  fa.setStateFinal(3);
-  fa.setStateFinal(4);
-
-  std::size_t size = fa.countStates();
-  words = {};
-  for(std::size_t i = 1; i < size + 1; ++i){
-    std::string chaine;
-    enumer_chaines(chaine, i);
-  }
-  words.insert("");
-
-  fa::Automaton n = fa::Automaton::createMinimalHopcroft(fa);
-
-  EXPECT_TRUE(n.isValid());
-  EXPECT_TRUE(n.isLanguageEmpty());
-  EXPECT_EQ(n.countStates(), 1u);
-  EXPECT_EQ(n.countSymbols(), 2u);
-  EXPECT_TRUE(n.hasSymbol('a'));
-  EXPECT_TRUE(n.hasSymbol('b'));
-  EXPECT_TRUE(n.isDeterministic());
-  EXPECT_TRUE(n.isComplete());
-  EXPECT_TRUE(equivalent(fa, n));
-}
-
-TEST(createMinimalHopcroft, NonAccessibleState){
-  fa::Automaton fa;
-
-  EXPECT_TRUE(fa.addState(0));
-  EXPECT_TRUE(fa.addState(1));
-  EXPECT_TRUE(fa.addSymbol('a'));
-  EXPECT_TRUE(fa.addTransition(0, 'a', 0));
-  fa.setStateInitial(0);
-  fa.setStateFinal(0);
-
-  std::size_t size = fa.countStates();
-  words = {};
-  for(std::size_t i = 1; i < size + 1; ++i){
-    std::string chaine;
-    enumer_chaines(chaine, i);
-  }
-  words.insert("");
-
-  fa::Automaton n = fa::Automaton::createMinimalHopcroft(fa);
-  n.prettyPrint(std::cout);
-  EXPECT_TRUE(n.isValid());
-  EXPECT_FALSE(n.isLanguageEmpty());
-  EXPECT_EQ(n.countStates(), 1u);
-  EXPECT_EQ(n.countSymbols(), 1u);
-  EXPECT_TRUE(n.hasSymbol('a'));
-  EXPECT_TRUE(n.isDeterministic());
-  EXPECT_TRUE(n.isComplete());
-  EXPECT_TRUE(equivalent(fa, n));
-}
-
-#endif // HOPCROFT
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);

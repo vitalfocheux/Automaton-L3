@@ -1,7 +1,8 @@
 .vscode/
+build/
 googletest/
 prepare-archive.sh
 testfa *.cc
-automate.*
+*.tar*
+*.Identifier
 CMakeLists.txt
-build/
