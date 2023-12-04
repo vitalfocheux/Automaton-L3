@@ -394,34 +394,30 @@ namespace fa {
       fa.addTransition(st, letter, st);
     }
     for(auto stateEntry : fa.state){
-      if(fa.transition.find(stateEntry.first) != fa.transition.end() && fa.transition.at(stateEntry.first).size() != fa.alphabet.size()){
         for(char letter : fa.alphabet){
-          if(fa.transition.at(stateEntry.first).find(letter) == fa.transition.at(stateEntry.first).end()){
-              fa.addTransition(stateEntry.first, letter, st);
+          if(fa.transition.find(stateEntry.first) == fa.transition.end()){
+            fa.addTransition(stateEntry.first, letter, st);
+          }else if(fa.transition.at(stateEntry.first).find(letter) == fa.transition.at(stateEntry.first).end()){
+            fa.addTransition(stateEntry.first, letter, st);
+          }else if(fa.transition.at(stateEntry.first).at(letter).size() == 0){
+            fa.addTransition(stateEntry.first, letter, st);
           }
         }
-      }else if(fa.transition.find(stateEntry.first) == fa.transition.end() && (std::size_t)(stateEntry.first) != st){
-        for(char letter : fa.alphabet){
-           fa.addTransition(stateEntry.first, letter, st);
-        }
-      }
     }
     return fa;
   }
 
   Automaton Automaton::createComplement(const Automaton& automaton){
     assert(automaton.isValid());
-    fa::Automaton fa = Automaton::createComplete(automaton);
-    fa = Automaton::createDeterministic(fa);
+    fa::Automaton fa = Automaton::createDeterministic(automaton);
+    fa = Automaton::createComplete(fa);
     for(auto stateEntry : fa.state){
-      if(stateEntry.second == FINAL_AND_INITIAL_STATE){
-        fa.state.at(stateEntry.first) = INITIAL_STATE;
+      if(!fa.isStateFinal(stateEntry.first)){
+        fa.setStateFinal(stateEntry.first);
       }else if(stateEntry.second == FINAL_STATE){
         fa.state.at(stateEntry.first) = 0;
-      }else if(stateEntry.second == 0){
-        fa.state.at(stateEntry.first) = FINAL_STATE;
-      }else if(stateEntry.second == INITIAL_STATE){
-        fa.state.at(stateEntry.first) = FINAL_AND_INITIAL_STATE;
+      }else if(stateEntry.second == FINAL_AND_INITIAL_STATE){
+        fa.state.at(stateEntry.first) = INITIAL_STATE;
       }
     }
     return fa;
@@ -780,6 +776,10 @@ namespace fa {
     fa::Automaton Armanoïde;
     Armanoïde.alphabet = lhs.alphabet;
 
+    for(char letter : rhs.alphabet){
+      Armanoïde.addSymbol(letter);
+    }
+
     std::set<std::map<int, std::pair<int, int>>> syncState;
     std::set<int> indices;
 
@@ -791,7 +791,16 @@ namespace fa {
           std::map<int, std::pair<int, int>> state;
           state[i] = std::make_pair(lhsEntry.first, rhsEntry.first);
           syncState.insert(state);
+          indices.insert(i);
           ++i;
+          
+        }else if(lhs.isStateFinal(lhsEntry.first) && rhs.isStateFinal(rhsEntry.first)){
+          std::map<int, std::pair<int, int>> state;
+          state[i] = std::make_pair(lhsEntry.first, rhsEntry.first);
+          syncState.insert(state);
+          indices.insert(i);
+          ++i;
+
         }
       }
     }
@@ -831,8 +840,8 @@ namespace fa {
           for(int newRhsState : rhsTransitions){
             int size = indices.size();
             for(int j : indices){
-              /*printf("AT %d (%d, %d)\n", j, newLhsState, newRhsState);
-              printf("AT J = (%d, %d)\n", syncState[j].first, syncState[j].second);*/
+              //printf("AT %d (%d, %d)\n", j, newLhsState, newRhsState);
+             // printf("AT J = (%d, %d)\n", syncState[j].first, syncState[j].second);
               std::map<int, std::pair<int, int>> state;
               state[j] = std::make_pair(newLhsState, newRhsState);
               if(syncState.find(state) != syncState.end()){
@@ -1063,7 +1072,7 @@ namespace fa {
     
 
     std::map<int, std::map<char, int>> init, init_next;
-    std::set<std::vector<int>> states;
+    std::vector<std::vector<int>> states;
     for(auto stateEntry : res.state){
       //std::cout << "STATE :" << stateEntry.first << std::endl;
       if(res.isStateFinal(stateEntry.first)/*stateEntry.second == FINAL_AND_INITIAL_STATE || stateEntry.second == FINAL_STATE*/){
@@ -1086,12 +1095,12 @@ namespace fa {
       }
     }
 
-    /*std::cout << "INIT :\n";
+    std::cout << "INIT :\n";
     for(auto entry : init){
       for(auto l : entry.second){
         std::cout << entry.first << " " << l.first << " " << l.second << std::endl;
       }
-    }*/
+    }
 
     for(auto initEntry : init){
       std::vector<int> state;
@@ -1103,8 +1112,8 @@ namespace fa {
         std::cout << v << " ";
       }
       std::cout << "\n";*/
-      if(states.find(state) == states.end()){
-        states.insert(state);
+      if(std::find(states.begin(), states.end(), state) == states.end()/*states.find(state) == states.end()*/){
+        states.push_back(state);//states.insert(state);
         //std::cout << "init_next :" << initEntry.first << " 0 " << states.size() - 1 << std::endl;
         init_next[initEntry.first]['0'] = states.size();
       }else{
@@ -1131,7 +1140,7 @@ namespace fa {
     //int otherSize = other.countStates();
     //int stateSize = states.size();
 
-    /*std::cout << "STATES :";
+    std::cout << "STATES :";
     for(auto statesEntry : states){
       std::cout << "{";
       for(int v : statesEntry){
@@ -1141,12 +1150,19 @@ namespace fa {
     }
     std::cout << std::endl;
 
-    std::cout << "INIT_NEXT :\n";
+    std::cout << "INIT :\n";
+    for(auto entry : init){
+      for(auto l : entry.second){
+        std::cout << entry.first << " " << l.first << " " << l.second << std::endl;
+      }
+    }
+
+    std::cout << "\nINIT_NEXT :\n";
     for(auto entry : init_next){
       for(auto l : entry.second){
         std::cout << entry.first << " " << l.first << " " << l.second << std::endl;
       }
-    }*/
+    }
 
     //std::cout << "otherSize :" << otherSize << "stateSize :" << stateSize << std::endl; 
     while(/*i < 5 && */init != init_next/* && stateSize < otherSize*/){
@@ -1194,8 +1210,8 @@ namespace fa {
             std::cout << v << " ";
           }
           std::cout << "\n";*/
-          if(states.find(state) == states.end()){
-            states.insert(state);
+          if(std::find(states.begin(), states.end(), state) == states.end()/*states.find(state) == states.end()*/){
+            states.push_back(state);//states.insert(state);
             if(indice.find(states.size()) == indice.end()){
               //std::cout << "INSERT_i init :" << initEntry.first << " 0 " << indice.size()+1 << std::endl;
               init[initEntry.first]['0'] = indice.size()+1;
@@ -1249,8 +1265,8 @@ namespace fa {
             std::cout << v << " ";
           }
           std::cout << "\n";*/
-          if(states.find(state) == states.end()){
-            states.insert(state);
+          if(std::find(states.begin(), states.end(), state) == states.end() /*states.find(state) == states.end()*/){
+            states.push_back(state); //states.insert(state);
             if(indice.find(states.size()) == indice.end()){
               //std::cout << "INSERT_i init :" << initEntry.first << " 0 " << indice.size() + 1 << std::endl;
               init_next[initEntry.first]['0'] = indice.size() + 1;

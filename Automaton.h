@@ -14,6 +14,7 @@
 #include <cassert>
 #include <climits>
 #include <queue>
+#include <unordered_set>
 
 
 namespace fa {
