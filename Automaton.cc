@@ -927,7 +927,7 @@ namespace fa {
     indices.insert(0);
 
     for(auto stateEntry : other.state){
-      if(other.isStateInitial(stateEntry.first) /*stateEntry.second == INITIAL_STATE || stateEntry.second == FINAL_AND_INITIAL_STATE*/){
+      if(other.isStateInitial(stateEntry.first)){
         deterInit.push_back(stateEntry.first);
       }
     }
@@ -962,7 +962,8 @@ namespace fa {
             //std::cout << "STATEENTRYFORST: " << stateEntry.first << std::endl;
             if(/*stateEntry.first != indice && */stateEntry.first == /*val*/deterStateEntry.at(i) && other.isStateFinal(stateEntry.first) /*(stateEntry.second == FINAL_STATE || stateEntry.second == FINAL_AND_INITIAL_STATE)*/){
               //res.setStateFinal(deterStateEntry.back());
-              //std::cout << "SET FINAL : " << val << std::endl;
+              //std::cout << "SET FINAL : " << deterStateEntry.at(0) << std::endl;
+              res.addState(deterStateEntry.at(0));
               res.setStateFinal(deterStateEntry.at(0));
             }
           }
@@ -1041,8 +1042,6 @@ namespace fa {
         }
       }
     }
-
-    
 
     res.setStateInitial(0);
 
@@ -1317,19 +1316,19 @@ namespace fa {
       ++i;
     }
 
-    /*std::cout << "\n\nINIT\n";
-    for(auto stateEntry : init){
-      for(auto letterEntry : stateEntry.second){
-        std::cout << stateEntry.first << " " << letterEntry.first << " " << letterEntry.second << std::endl;
-      }
-    }
+    // std::cout << "\n\nINIT\n";
+    // for(auto stateEntry : init){
+    //   for(auto letterEntry : stateEntry.second){
+    //     std::cout << stateEntry.first << " " << letterEntry.first << " " << letterEntry.second << std::endl;
+    //   }
+    // }
 
-    std::cout << "INIT_NEXT\n";
-    for(auto stateEntry : init_next){
-      for(auto letterEntry : stateEntry.second){
-        std::cout << stateEntry.first << " " << letterEntry.first << " " << letterEntry.second << std::endl;
-      }
-    }*/
+    // std::cout << "INIT_NEXT\n";
+    // for(auto stateEntry : init_next){
+    //   for(auto letterEntry : stateEntry.second){
+    //     std::cout << stateEntry.first << " " << letterEntry.first << " " << letterEntry.second << std::endl;
+    //   }
+    // }
 
     
 
@@ -1353,33 +1352,60 @@ namespace fa {
     //printf("not minim\n");
     fa::Automaton res_final;
 
+    res_final.alphabet = res.alphabet;
+
     for(auto stateEntry : init_next){
       for(auto letterEntry : stateEntry.second){
         if(letterEntry.first == '0'){
           res_final.addState(letterEntry.second);
-          /*if(res_final.addState(letterEntry.second)){
-            std::cout << "ADD STATE RES :" << letterEntry.second << std::endl;
-          }*/
-          if(res.isStateFinal(stateEntry.first)){
-            //printf("SET FINAL = %d\n", letterEntry.second);
-            res_final.setStateFinal(letterEntry.second);
-          }
-          if(res.isStateInitial(stateEntry.first)){
-            //printf("SET INIT = %d\n", letterEntry.second);
-            res_final.setStateInitial(letterEntry.second);
-          }
+          // if(res_final.addState(letterEntry.second)){
+          //   std::cout << "BASE " << stateEntry.first <<  " ADD STATE RES :" << letterEntry.second << std::endl;
+          // }
+          // if(res.isStateFinal(stateEntry.first)){
+            
+          //   res_final.setStateFinal(letterEntry.second);
+          //   if(res_final.isStateFinal(letterEntry.second)){
+          //     printf("BASE %d SET FINAL = %d\n",  stateEntry.first, letterEntry.second);
+          //   }
+          // }
+          // if(res.isStateInitial(stateEntry.first)){
+            
+            
+          //   res_final.setStateInitial(letterEntry.second);
+          //   if(res_final.isStateInitial(letterEntry.second)){
+          //     printf("BASE %d SET INIT = %d\n", stateEntry.first, letterEntry.second);
+          //   }
+          // }
         }
-        if(letterEntry.first != '0'){
-          res_final.addSymbol(letterEntry.first);
-          /*if(res_final.addSymbol(letterEntry.first)){
-            std::cout << "ADD SYMBOL RES :" << letterEntry.first << std::endl;
-          }*/
-        }
+        // if(letterEntry.first != '0'){
+        //   res_final.addSymbol(letterEntry.first);
+        //   /*if(res_final.addSymbol(letterEntry.first)){
+        //     std::cout << "ADD SYMBOL RES :" << letterEntry.first << std::endl;
+        //   }*/
+        // }
       }
     }
 
     for(auto stateEntry : init_next){
       int indice_from = init_next[stateEntry.first]['0'];
+      if(res.isStateFinal(stateEntry.first)){
+        if(res_final.isStateFinal(indice_from)){
+          continue;
+        }
+        res_final.setStateFinal(indice_from);
+        // if(res_final.isStateFinal(indice_from)){
+        //   printf("BASE %d SET FINAL : %d\n", stateEntry.first, indice_from);
+        // }
+      }
+      if(res.isStateInitial(stateEntry.first)){
+        if(res_final.isStateInitial(indice_from)){
+          continue;
+        }
+        res_final.setStateInitial(indice_from);
+        // if(res_final.isStateInitial(indice_from)){
+        //   printf("BASE %d SET INITIAL : %d\n", stateEntry.first, indice_from);
+        // }
+      }
       for(auto letterEntry : stateEntry.second){
         //std::cout << "TR :" << indice_from << " " << letterEntry.first << " " << init[stateEntry.first][letterEntry.first] << std::endl;
         res_final.addTransition(indice_from, letterEntry.first, init[stateEntry.first][letterEntry.first]);
@@ -1398,22 +1424,22 @@ namespace fa {
     fa::Automaton res = other;
     //res.removeNonAccessibleStates();
     res = createMirror(res);
-    printf("mirror\n");
-    res.prettyPrint(std::cout);
+    //printf("mirror\n");
+    //res.prettyPrint(std::cout);
     res = createDeterministic(res);
     
-    printf("deter\n");
-    res.prettyPrint(std::cout);
+   // printf("deter\n");
+   // res.prettyPrint(std::cout);
     res = createMirror(res);
-    printf("mirror\n");
-    res.prettyPrint(std::cout);
+  // printf("mirror\n");
+   // res.prettyPrint(std::cout);
     res = createDeterministic(res);
-    printf("deter\n");
-    res.prettyPrint(std::cout);
+   // printf("deter\n");
+  //  res.prettyPrint(std::cout);
 
     res = createComplete(res);
-    printf("complete\n");
-    res.prettyPrint(std::cout);
+  //  printf("complete\n");
+  //  res.prettyPrint(std::cout);
     return res;
   }
 
