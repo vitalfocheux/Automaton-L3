@@ -529,11 +529,11 @@ namespace fa {
   }
 
   void visitedGraph(const Automaton* fa, std::vector<int>& visited, int state){
+    visited.push_back(state);
     for(auto stateEntry : fa->state){
       for(char letter : fa->alphabet){
         if(fa->hasTransition(state, letter, stateEntry.first)){
           if(std::find(visited.begin(), visited.end(), stateEntry.first) == visited.end()){
-            visited.push_back(stateEntry.first);
             visitedGraph(fa, visited, stateEntry.first);
           }
         }
@@ -560,13 +560,13 @@ namespace fa {
 
     for(auto stateEntry : this->state){
       if(isStateInitial(stateEntry.first)){
-        visited.push_back(stateEntry.first);
+        //visited.push_back(stateEntry.first);
         visitedGraph(this, visited, stateEntry.first);
-      }
-    }
-    for(int state : visited){
-      if(this->isStateFinal(state)){
-        return false;
+        for(int state : visited){
+          if(this->isStateFinal(state)){
+            return false;
+          }
+        }
       }
     }
     return true;
@@ -776,10 +776,6 @@ namespace fa {
     fa::Automaton Armanoïde;
     Armanoïde.alphabet = lhs.alphabet;
 
-    for(char letter : rhs.alphabet){
-      Armanoïde.addSymbol(letter);
-    }
-
     std::set<std::map<int, std::pair<int, int>>> syncState;
     std::set<int> indices;
 
@@ -888,6 +884,7 @@ namespace fa {
   bool Automaton::hasEmptyIntersectionWith(const Automaton& other) const{
     assert(this->isValid());
     assert(other.isValid());
+
     fa::Automaton fa = Automaton::createIntersection(*this, other);
     return fa.isLanguageEmpty();
   }
@@ -1055,6 +1052,22 @@ namespace fa {
   bool Automaton::isIncludedIn(const Automaton& other) const{
     assert(this->isValid());
     assert(other.isValid());
+
+    if(this->isLanguageEmpty()){
+      return true;
+    }
+
+    std::vector<char> diff;
+    std::set_difference(this->alphabet.begin(), this->alphabet.end(), other.alphabet.begin(), other.alphabet.end(), std::back_inserter(diff));
+
+    for(char c : diff){
+      for(auto stateEntry : this->transition){
+        if(stateEntry.second.find(c) != stateEntry.second.end()){
+          return false;
+        }
+      }
+    }
+
     fa::Automaton res = fa::Automaton::createComplement(other);
     return hasEmptyIntersectionWith(res);
   }
@@ -1095,12 +1108,12 @@ namespace fa {
       }
     }
 
-    std::cout << "INIT :\n";
+    /*std::cout << "INIT :\n";
     for(auto entry : init){
       for(auto l : entry.second){
         std::cout << entry.first << " " << l.first << " " << l.second << std::endl;
       }
-    }
+    }*/
 
     for(auto initEntry : init){
       std::vector<int> state;
@@ -1140,7 +1153,7 @@ namespace fa {
     //int otherSize = other.countStates();
     //int stateSize = states.size();
 
-    std::cout << "STATES :";
+    /*std::cout << "STATES :";
     for(auto statesEntry : states){
       std::cout << "{";
       for(int v : statesEntry){
@@ -1162,7 +1175,7 @@ namespace fa {
       for(auto l : entry.second){
         std::cout << entry.first << " " << l.first << " " << l.second << std::endl;
       }
-    }
+    }*/
 
     //std::cout << "otherSize :" << otherSize << "stateSize :" << stateSize << std::endl; 
     while(/*i < 5 && */init != init_next/* && stateSize < otherSize*/){
@@ -1385,22 +1398,22 @@ namespace fa {
     fa::Automaton res = other;
     //res.removeNonAccessibleStates();
     res = createMirror(res);
-    //printf("mirror\n");
-    //res.prettyPrint(std::cout);
+    printf("mirror\n");
+    res.prettyPrint(std::cout);
     res = createDeterministic(res);
     
-    //printf("deter\n");
-    //res.prettyPrint(std::cout);
+    printf("deter\n");
+    res.prettyPrint(std::cout);
     res = createMirror(res);
-    //printf("mirror\n");
-    //res.prettyPrint(std::cout);
+    printf("mirror\n");
+    res.prettyPrint(std::cout);
     res = createDeterministic(res);
-    //printf("deter\n");
-    //res.prettyPrint(std::cout);
+    printf("deter\n");
+    res.prettyPrint(std::cout);
 
     res = createComplete(res);
-    //printf("complete\n");
-    //res.prettyPrint(std::cout);
+    printf("complete\n");
+    res.prettyPrint(std::cout);
     return res;
   }
 

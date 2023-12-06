@@ -3859,8 +3859,6 @@ TEST(createMinimalMoore, testFromThe2023CC1) {
   EXPECT_TRUE(fa2.match("bb"));
   EXPECT_TRUE(fa2.match("ba"));
   EXPECT_TRUE(fa2.match("bbbbababbba"));
-  fa.prettyPrint(std::cout);
-  fa2.prettyPrint(std::cout);
   EXPECT_TRUE(fa.countStates() != fa2.countStates());
   EXPECT_EQ(fa.countSymbols(), fa2.countSymbols());
   do_not_have_symbol(fa2, "ab");
@@ -5427,6 +5425,9 @@ TEST(createMinimalBrzozowski, testWithAVerySmallAutomatonButStateIsINT_MAXandINT
   EXPECT_TRUE(fa.addTransition(INT_MAX-1, 'a', INT_MAX));
   fa.setStateFinal(INT_MAX);
   fa.setStateInitial(INT_MAX);
+
+  fa.prettyPrint(std::cout);
+
   EXPECT_FALSE(fa.isDeterministic());
   EXPECT_TRUE(fa.isComplete());
   EXPECT_TRUE(fa.match(""));
@@ -5437,6 +5438,7 @@ TEST(createMinimalBrzozowski, testWithAVerySmallAutomatonButStateIsINT_MAXandINT
   EXPECT_TRUE(fa.countSymbols() == 1);
   do_not_have_symbol(fa, "a");
   fa::Automaton fa2 = fa.createMinimalBrzozowski(fa);
+  fa2.prettyPrint(std::cout);
   do_not_have_symbol(fa2, "a");
   EXPECT_TRUE(fa2.isDeterministic());
   EXPECT_TRUE(fa2.isComplete());
