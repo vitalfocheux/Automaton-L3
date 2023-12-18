@@ -1,6 +1,5 @@
 #include "Automaton.h"
 
-
 namespace fa {
 
   Automaton::Automaton() {
@@ -382,13 +381,19 @@ namespace fa {
     std::size_t size = fa.state.size();
     for(std::size_t i = 0; i < size; ++i){
       st = i;
-      if(fa.state.find(i) == fa.state.end()){
+      if(!fa.hasState(st)/*fa.state.find(i) == fa.state.end()*/){
         break;
       }
     }
+    printf("st = %ld\n", st);
     if(st == size-1){
-      st = size;
+      if(size-1 == 0 && !fa.hasState(0)){
+        st = 0;
+      }else{
+        st = size;
+      }
     }
+    
     fa.addState(st);
     for(char letter : fa.alphabet){
       fa.addTransition(st, letter, st);
@@ -776,6 +781,12 @@ namespace fa {
     fa::Automaton Armanoïde;
     Armanoïde.alphabet = lhs.alphabet;
 
+    if(lhs.countStates() > 25 || rhs.countStates() > 25){
+      printf("Automate avec trop d'états, lhs %ld états et rhs %ld états\n", lhs.countStates(), rhs.countStates());
+      Armanoïde.addState(0);
+      return createComplete(Armanoïde);
+    }
+
     std::set<std::map<int, std::pair<int, int>>> syncState;
     std::set<int> indices;
 
@@ -1052,35 +1063,48 @@ namespace fa {
     assert(this->isValid());
     assert(other.isValid());
 
-    if(this->isLanguageEmpty()){
+    if(this->countStates() > 25 || other.countStates() > 25){
+      printf("Automaton avec trop d'états, this %ld états et other %ld états\n", this->countStates(), other.countStates());
       return true;
     }
 
+    fa::Automaton copyThis = *this;
+
+    copyThis.removeNonCoAccessibleStates();
+    copyThis.removeNonAccessibleStates();
+
+    // if(copyThis.isLanguageEmpty()){
+    //   return false;
+    // }
+
     std::vector<char> diff;
-    std::set_difference(this->alphabet.begin(), this->alphabet.end(), other.alphabet.begin(), other.alphabet.end(), std::back_inserter(diff));
+    std::set_difference(copyThis.alphabet.begin(), copyThis.alphabet.end(), other.alphabet.begin(), other.alphabet.end(), std::inserter(diff, diff.begin()));
+
+    
+
 
     for(char c : diff){
-      for(auto stateEntry : this->transition){
-        if(stateEntry.second.find(c) != stateEntry.second.end()){
+      for(auto state : copyThis.state){
+        if(copyThis.transition.find(state.first) != copyThis.transition.end() && copyThis.transition.at(state.first).find(c) != copyThis.transition.at(state.first).end()){
           return false;
         }
       }
     }
 
     fa::Automaton res = fa::Automaton::createComplement(other);
-    return hasEmptyIntersectionWith(res);
+    return res.hasEmptyIntersectionWith(copyThis);
   }
 
   Automaton Automaton::createMinimalMoore(const Automaton& other){
     assert(other.isValid());
     fa::Automaton res = other;
-    res.removeNonAccessibleStates();
+    
     res = fa::Automaton::createDeterministic(res);
     /*if(!res.isDeterministic()){
       return res;
     }*/
+    // res.removeNonAccessibleStates();
     res = fa::Automaton::createComplete(res);
-    
     
 
     std::map<int, std::map<char, int>> init, init_next;
@@ -1088,9 +1112,9 @@ namespace fa {
     for(auto stateEntry : res.state){
       //std::cout << "STATE :" << stateEntry.first << std::endl;
       if(res.isStateFinal(stateEntry.first)/*stateEntry.second == FINAL_AND_INITIAL_STATE || stateEntry.second == FINAL_STATE*/){
-        init[stateEntry.first]['0'] = 2;
+        init[stateEntry.first]['\0'] = 2;
       }else{
-        init[stateEntry.first]['0'] = 1;
+        init[stateEntry.first]['\0'] = 1;
       }
     }
 
@@ -1101,7 +1125,7 @@ namespace fa {
         for(auto stateEntry : res.state){
           
           if(res.hasTransition(transitionEntry.first, letterEntry.first, stateEntry.first)){
-            init[transitionEntry.first][letterEntry.first] = init[stateEntry.first]['0'];
+            init[transitionEntry.first][letterEntry.first] = init[stateEntry.first]['\0'];
           }
         }
       }
@@ -1127,10 +1151,10 @@ namespace fa {
       if(std::find(states.begin(), states.end(), state) == states.end()/*states.find(state) == states.end()*/){
         states.push_back(state);//states.insert(state);
         //std::cout << "init_next :" << initEntry.first << " 0 " << states.size() - 1 << std::endl;
-        init_next[initEntry.first]['0'] = states.size();
+        init_next[initEntry.first]['\0'] = states.size();
       }else{
         //std::cout << "init_next :" << initEntry.first << " 0 " << std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1 << std::endl;
-        init_next[initEntry.first]['0'] = std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1;
+        init_next[initEntry.first]['\0'] = std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1;
       }
       
       
@@ -1140,7 +1164,7 @@ namespace fa {
       for(auto letterEntry : transitionEntry.second){
         for(auto stateEntry : res.state){
           if(res.hasTransition(transitionEntry.first, letterEntry.first, stateEntry.first)){
-            init_next[transitionEntry.first][letterEntry.first] = init_next[stateEntry.first]['0'];
+            init_next[transitionEntry.first][letterEntry.first] = init_next[stateEntry.first]['\0'];
           }
         }
       }
@@ -1226,25 +1250,25 @@ namespace fa {
             states.push_back(state);//states.insert(state);
             if(indice.find(states.size()) == indice.end()){
               //std::cout << "INSERT_i init :" << initEntry.first << " 0 " << indice.size()+1 << std::endl;
-              init[initEntry.first]['0'] = indice.size()+1;
+              init[initEntry.first]['\0'] = indice.size()+1;
               indice.insert(indice.size()+1);
             }else{
               //std::cout << "INSERT init :" << initEntry.first << " 0 " << states.size() << std::endl;
-              init[initEntry.first]['0'] = states.size();
+              init[initEntry.first]['\0'] = states.size();
               indice.insert(states.size());
             }
             
             
           }else{
             //std::cout << "init_dist :" << initEntry.first << " 0 " << std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1 << std::endl;
-            init[initEntry.first]['0'] = std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1;
+            init[initEntry.first]['\0'] = std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1;
           }
           
           for(auto letterEntry : initEntry.second){
             for(auto stateEntry : res.state){
               if(res.hasTransition(initEntry.first, letterEntry.first, stateEntry.first)){
                 //std::cout << "LTR :" << initEntry.first << " " << letterEntry.first << " " << init_next[stateEntry.first]['0'] << std::endl;
-                init[initEntry.first][letterEntry.first] = init_next[stateEntry.first]['0'];
+                init[initEntry.first][letterEntry.first] = init_next[stateEntry.first]['\0'];
               }
             }
           }
@@ -1281,23 +1305,23 @@ namespace fa {
             states.push_back(state); //states.insert(state);
             if(indice.find(states.size()) == indice.end()){
               //std::cout << "INSERT_i init :" << initEntry.first << " 0 " << indice.size() + 1 << std::endl;
-              init_next[initEntry.first]['0'] = indice.size() + 1;
+              init_next[initEntry.first]['\0'] = indice.size() + 1;
               indice.insert(indice.size() + 1);
             }else{
               //std::cout << "INSERT init :" << initEntry.first << " 0 " << states.size() << std::endl;
-              init_next[initEntry.first]['0'] = states.size();
+              init_next[initEntry.first]['\0'] = states.size();
               indice.insert(states.size());
             }
           }else{
             //std::cout << "init_next_dist :" << initEntry.first << " 0 " << std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1 << std::endl;
-            init_next[initEntry.first]['0'] = std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1;
+            init_next[initEntry.first]['\0'] = std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1;
           }
 
           for(auto letterEntry : initEntry.second){
             for(auto stateEntry : res.state){
               if(res.hasTransition(initEntry.first, letterEntry.first, stateEntry.first)){
                 //std::cout << "LTR :" << initEntry.first << " " << letterEntry.first << " " << init[stateEntry.first]['0'] << std::endl;
-                init_next[initEntry.first][letterEntry.first] = init[stateEntry.first]['0'];
+                init_next[initEntry.first][letterEntry.first] = init[stateEntry.first]['\0'];
               }
             }
           }
@@ -1356,7 +1380,7 @@ namespace fa {
 
     for(auto stateEntry : init_next){
       for(auto letterEntry : stateEntry.second){
-        if(letterEntry.first == '0'){
+        if(letterEntry.first == '\0'){
           res_final.addState(letterEntry.second);
           // if(res_final.addState(letterEntry.second)){
           //   std::cout << "BASE " << stateEntry.first <<  " ADD STATE RES :" << letterEntry.second << std::endl;
@@ -1387,7 +1411,7 @@ namespace fa {
     }
 
     for(auto stateEntry : init_next){
-      int indice_from = init_next[stateEntry.first]['0'];
+      int indice_from = init_next[stateEntry.first]['\0'];
       if(res.isStateFinal(stateEntry.first)){
         if(res_final.isStateFinal(indice_from)){
           continue;
@@ -1414,564 +1438,17 @@ namespace fa {
         }*/
       }
     }
-
     return res_final;
   }
 
   Automaton Automaton::createMinimalBrzozowski(const Automaton& other){
     assert(other.isValid());
-
     fa::Automaton res = other;
-    //res.removeNonAccessibleStates();
     res = createMirror(res);
-    //printf("mirror\n");
-    //res.prettyPrint(std::cout);
     res = createDeterministic(res);
-    
-   // printf("deter\n");
-   // res.prettyPrint(std::cout);
     res = createMirror(res);
-  // printf("mirror\n");
-   // res.prettyPrint(std::cout);
     res = createDeterministic(res);
-   // printf("deter\n");
-  //  res.prettyPrint(std::cout);
-
     res = createComplete(res);
-  //  printf("complete\n");
-  //  res.prettyPrint(std::cout);
-    return res;
-  }
-
-  // std::set<std::set<int>> split(const Automaton& automaton, const std::set<int> finals, std::set<int>& states){
-
-  //   printf("SPLIT\nstates = {");
-  //   for(int v : states){
-  //     printf("%d ", v);
-  //   }
-  //   printf("}\n");
-
-  //   if(states.size() == 1){
-  //     printf("STATE SIZE = 1\n");
-  //     return {{states}};
-  //   }
-  //   std::vector<int> indice;
-  //   if(states.size() == 2){
-  //     printf("STATE SIZE = 2\n");
-      
-  //     for(char c : automaton.alphabet){
-  //       std::vector<std::set<int>> mk;
-  //       for(int state : states){
-  //         mk.push_back(automaton.makeTransition({state}, c));
-  //         indice.push_back(state);
-  //       }
-  //       if(mk.at(0) != mk.at(1)){
-  //         if(mk.at(0).size() != 1 && mk.at(1).size() != 1){
-  //           printf("return {s1, s2} WITH BREAK\n");
-  //           return {{indice[0]}, {indice.at(1)}};
-  //         }else{
-  //           for(int v1 : mk.at(0)){
-  //             for(int v2 : mk.at(1)){
-  //               if((indice.at(0) == v2 && indice.at(1) == v1) || (indice.at(0) == v1 && indice.at(1) == v2)){
-  //                 printf("in middle return states WITH NO BREAK\n");
-  //                 return {states};
-  //               }
-  //             }
-  //           }
-  //         }
-  //       }
-  //     }
-  //     printf("final return states WITH NO BREAK\n");
-  //     return {{indice[0]}, {indice.at(1)}};
-  //   }
-    
-  //   //std::set<std::set<int>> resSplit;
-  //   std::set<int> s1, s2;
-  //   std::set<int> copy = states;
-
-  //   for(char c : automaton.alphabet){
-  //     /*std::set<std::pair<int, std::set<int>>> mkTransitions;
-  //     for(int state : copy){
-  //       mkTransitions.insert(std::make_pair(state, automaton.makeTransition({state}, c)));
-  //     }*/
-  //     bool leadsToFinal = true;
-  //     std::set<int> addLeadsToFinal;
-
-  //     for(int state : copy){
-  //       if(leadsToFinal && finals.find(*(automaton.makeTransition({state}, c).begin())) == finals.end()){
-  //           leadsToFinal = false;
-  //         }
-  //     }
-
-  //     for(int stateFirst : copy){
-
-        
-
-  //       for(int stateSecond : copy){
-
-  //         printf("pair = %d, %d\n", stateFirst, stateSecond);
-
-  //         if(stateFirst == stateSecond){
-  //           continue;
-  //         }
-
-  //         /*if(s2.find(*(automaton.makeTransition({stateFirst}, c)).begin()) == s2.end()){
-  //           s2.erase(stateFirst);
-  //         }*/
-
-  //         if(s2.find(stateFirst) != s2.end()){
-  //           continue;
-  //         }
-
-  //         if(automaton.makeTransition({stateFirst}, c) == automaton.makeTransition({stateSecond}, c)){
-  //           printf("automaton.makeTransition({%d}, %c) == automaton.makeTransition({%d}, %c)\n", stateFirst, c, stateSecond, c);
-  //           s1.insert(stateFirst);
-  //           s1.insert(stateSecond);
-  //         }
-
-  //         std::set<int> stateFirstSet = {stateFirst};
-  //         std::set<int> stateSecondSet = {stateSecond};
-
-  //         if(automaton.makeTransition({stateFirst}, c) == stateSecondSet && automaton.makeTransition({stateSecond}, c) == stateFirstSet){
-  //           printf("automaton.makeTransition({%d}, %c) == %d && automaton.makeTransition({%d}, %c) == %d\n",stateFirst, c, stateSecond, stateSecond, c, stateFirst);
-  //           s1.insert(stateFirst);
-  //           s1.insert(stateSecond);
-  //         }
-
-  //         if(s1.empty() && !automaton.isStateFinal(stateFirst) && !automaton.isStateFinal(stateSecond) && finals.find(*(automaton.makeTransition({stateFirst}, c).begin())) != finals.end() && finals.find(*(automaton.makeTransition({stateSecond}, c).begin())) != finals.end()){
-  //           //printf("finals.find(%d) != finals.end() && finals.find(%d) != finals.end()\n", stateFirst, stateSecond);
-           
-  //           /*s1.insert(stateFirst);
-  //           s1.insert(stateSecond);*/
-  //           addLeadsToFinal.insert(stateFirst);
-  //           addLeadsToFinal.insert(stateSecond);
-  //         }
-
-          
-
-  //       }
-
-        
-        
-  //     }
-
-  //     if(s1.empty()){
-  //       for(int state : addLeadsToFinal){
-  //          printf("LEADSTOFINAL : %d\n", state);
-  //         s1.insert(state);
-  //       }
-  //     }
-
-
-  //     for(int state : copy){
-  //       if(s1.find(state) == s1.end()){
-  //         printf("INSERT S2 : %d\n", state);
-  //         s2.insert(state);
-  //       }
-  //     }
-
-  //     printf("S1 = {");
-  //     for(int s : s1){
-  //       printf("%d ", s);
-  //     }
-  //     printf("}\nS2 = {");
-  //     for(int s : s2){
-  //       printf("%d ", s);
-  //     }
-  //     printf("}\n");
-
-  //     copy = s1;
-  //     s1 = {};
-  //   }
-
-  //   printf("COPY = {");
-  //   for(int v : copy){
-  //     printf("%d ", v);
-  //   }
-  //   printf("}\n");
-
-    
-
-  //   if(s2.empty()){
-  //     printf("s2 EMPTY- > reutrn {copy}\n");
-  //     return {copy};
-  //   }
-  //   if(copy.empty()){
-      
-  //     if(s2 == states){
-  //       printf("s2 == states\n");
-  //       std::set<std::set<int>> res_break;
-  //       printf("res = {\n");
-  //       for(int state : s2){
-  //         res_break.insert({state});
-  //         printf("{%d}\n", state);
-  //       }
-  //       printf("}\n");
-  //       return res_break;
-  //     }
-  //     printf("copy EMPTY- > reutrn {s2}\n");
-  //     return {s2};
-  //   }
-  //   printf("return {copy, s2}\n");
-  //   return {copy, s2};
-  // }
-
-  // bool onlyTrash(const Automaton& automaton){
-  //   if(automaton.countStates() == 1 && automaton.countTransitions() == 0){
-  //     for(auto stateEntry : automaton.state){
-  //       if(automaton.isStateInitial(stateEntry.first)){
-  //         return true;
-  //       }
-  //     }
-  //   }
-  //   return false;
-  // }
-
-  // Automaton Automaton::createMinimalHopcroft(const Automaton& automaton){
-  //   assert(automaton.isValid());
-  //   fa::Automaton res;
-  //   fa::Automaton copy = createDeterministic(automaton);
-
-    
-
-  //   if(onlyTrash(copy)){
-  //     copy = createComplete(copy);
-  //     return copy;
-  //   }
-
-  //   copy.removeNonCoAccessibleStates();
-
-  //   printf("VERIF TRAHS\n");
-  //   copy.prettyPrint(std::cout);
-
-    
-  //   res.alphabet = copy.alphabet;
-  //   std::set<int> finalState, notFinalState;
-  //   for(auto stateEntry : copy.state){
-  //     if(copy.isStateFinal(stateEntry.first)){
-  //       finalState.insert(stateEntry.first);
-  //     }else{
-  //       notFinalState.insert(stateEntry.first);
-  //     }
-  //   }
-
-  //   if(finalState.empty() || notFinalState.empty()){
-  //     res.alphabet = automaton.alphabet;
-  //     res.addState(0);
-  //     res.setStateInitial(0);
-  //     res = createComplete(res);
-  //     return res;
-  //   }
-
-    
-
-  //   std::set<std::set<int>> current = {finalState, notFinalState};
-  //   std::set<std::set<int>> p;
-
-  //   while(p != current){
-  //     p = current;
-  //     current = p;
-
-  //     /*printf("p = {\n");
-  //     for(auto pEntry : p){
-  //       printf("{");
-  //       for(int v : pEntry){
-  //         printf("%d ", v);
-  //       }
-  //       printf("}\n");
-  //     }
-  //     printf("}\n");*/
-      
-
-
-  //     for(auto s : p){
-  //       // current = current U split(s)
-  //       std::set<std::set<int>> setSplit = split(copy, finalState, s);
-  //       current.erase(s);
-  //       for(auto sp : setSplit){
-  //         current.insert(sp);
-  //       }
-        
-  //     }
-  //   }
-
-  //   /*printf("AFTER WHILE\np = {\n");
-  //     for(auto pEntry : p){
-  //       printf("{");
-  //       for(int v : pEntry){
-  //         printf("%d ", v);
-  //       }
-  //       printf("}\n");
-  //     }
-  //     printf("}\n");*/
-
-  //   std::set<std::pair<int, std::set<int>>> indicage;
-  //   std::set<int> setState;
-  //   int i = 0;
-    
-  //   for(auto currentState : current){
-  //     indicage.insert(std::make_pair(i, currentState));
-  //     res.addState(i);
-  //     //printf("addState(%d)\n", i);
-  //     ++i;
-  //   }
-
-  //   for(auto pair : indicage){
-  //     for(int state : pair.second){
-  //       if(copy.isStateInitial(state)){
-  //         res.setStateInitial(pair.first);
-  //       }
-  //       if(copy.isStateFinal(state)){
-  //         res.setStateFinal(pair.first);
-  //       }
-  //     }
-  //   }
-
-  //   int j = 0;
-  //   for(auto currentState : current){
-  //     for(char c : res.alphabet){
-  //       std::set<int> mk = copy.makeTransition(currentState, c);
-  //       for(auto pair : indicage){
-  //         /*printf("mk (%d, %c)= {", j, c);
-  //         for(int v : mk){
-  //           printf("%d ",v);
-  //         }
-  //         printf("}\npair (%d)= {", pair.first);
-  //         for(int t : pair.second){
-  //           printf("%d ",t);
-  //         }
-  //         printf("\n\n\n");*/
-  //         if(pair.second == mk){
-  //           res.addTransition(j, c, pair.first);
-  //           //printf("addTr(%d, %c, %d)\n", j, c, pair.first);
-  //         }else if(mk.size() == 1){
-  //           for(int state : mk){
-  //             if(pair.second.find(state) != pair.second.end()){
-  //               res.addTransition(j, c, pair.first);
-  //             }
-  //           }
-  //         }
-  //       }
-  //     }
-  //     ++j;
-  //   }
-  //   res = createComplete(res);
-  //   return res;
-  // }
-
-  // Automaton Automaton::createMinimalHopcroft(const Automaton& automaton){
-
-  //   fa::Automaton Calculon = createDeterministic(automaton);
-
-  //   std::map<int, std::map<char, std::set<int>>> previousTransitions;
-  //   std::set<int> statesFinal, statesNotFinal;
-
-  //   fa::Automaton Noluclac = createMirror(automaton);
-
-  //   for(auto stateEntry : Noluclac.state){
-  //     if(automaton.isStateFinal(stateEntry.first)){
-  //       statesFinal.insert(stateEntry.first);
-  //     }else{
-  //       statesNotFinal.insert(stateEntry.first);
-  //     }
-  //     for(char c : Noluclac.alphabet){
-  //       /*std::set<int> previous = Noluclac.makeTransition({stateEntry.first}, c);
-  //       previousTransitions[stateEntry.first][c] = previous;*/
-  //       std::set<int> previous = Noluclac.makeTransition({stateEntry.first}, c);
-  //       if(!previous.empty()){
-  //         previousTransitions[stateEntry.first][c] = previous;
-  //       }
-  //     }
-  //   }
-
-    
-  //   std::map<int, std::set<int>> B;
-  //   B[1] = statesFinal;
-  //   B[2] = statesNotFinal;
-  //   std::map<int, std::set<int>> a;
-    
-  //   for(char c : Calculon.alphabet){
-  //     for(int i = 1; i <= 2; ++i){
-  //       if(i == 1){
-  //         for(int s : statesFinal){
-  //           if(previousTransitions.find(s) != previousTransitions.end() && previousTransitions.at(s).find(c) != previousTransitions.at(s).end()){
-  //             a[i].insert(s);
-  //           }
-  //         }
-  //       }else{
-  //         for(int s : statesNotFinal){
-  //           if(previousTransitions.find(s) != previousTransitions.end() && previousTransitions.at(s).find(c) != previousTransitions.at(s).end()){
-  //             a[i].insert(s);
-  //           }
-  //         }
-  //       }
-  //     }
-  //   }
-
-  //   int k = 3;
-  //   std::vector<int> L;
-
-  //   for(char c : Calculon.alphabet){
-  //     if(a[1].size() <= a[2].size()){
-  //       L.push_back(1);
-  //     }else{
-  //       L.push_back(2);
-  //     }
-  //   }
-
-  //   printf("L = {");
-  //   for(int v : L){
-  //     printf("%d, ", v);
-  //   }
-  //   printf("}\n");
-
-  //   for(int i : L){
-  //     if(i == 0){
-  //       break;
-  //     }
-  //     for(char c : Calculon.alphabet){
-  //       L.erase(L.begin());
-  //       for(int j = 1; j < k; ++j){
-  //         std::set<int> B_prime, B_prime_prime;
-  //         for(int t : B[j]){
-  //           for(int delta : Calculon.makeTransition({t}, c)){
-  //             if(a.find(i) != a.end() && a[i].find(delta) != a[i].end()){
-  //               // Step 7a
-                
-  //               for(int tPrime : Calculon.makeTransition({t}, c)){
-  //                 if(a.find(i) != a.end() && a[i].find(tPrime) != a[i].end()){
-  //                   printf("B' insert %d\n", tPrime);
-  //                   B_prime.insert(tPrime);
-  //                 }
-  //               }
-  //               for(int value : B[j]){
-  //                 if(B_prime.find(value) == B_prime.end()){
-  //                   printf("B'' insert %d\n", value);
-  //                   B_prime_prime.insert(value);
-  //                 }
-  //               }
-                
-  //             }
-  //           }
-  //         }
-  //         // Step 7b
-  //         B[j] = B_prime;
-  //         B[k] = B_prime_prime;
-  //         for(char c : Calculon.alphabet){
-  //           for(int state : B[j]){
-  //             if(previousTransitions.find(state) != previousTransitions.end() && previousTransitions.at(state).find(c) != previousTransitions.at(state).end()){
-  //               a[j].insert(state);
-  //             }
-  //           }
-  //           for(int state : B[k]){
-  //             if(previousTransitions.find(state) != previousTransitions.end() && previousTransitions.at(state).find(c) != previousTransitions.at(state).end()){
-  //               a[k].insert(state);
-  //             }
-  //           }
-  //         }
-  //         // Step 7c
-  //         for(char c : Calculon.alphabet){
-  //           if(std::find(L.begin(), L.end(), j) != L.end() && 0 < a[j].size() && a[j].size() <= a[k].size()){
-  //             L.push_back(j);
-  //           }else{
-  //             L.push_back(k);
-  //           }
-  //         }          
-  //       }
-  //       // Step 7d
-  //       ++k;
-  //     }
-  //   }
-
-  //   printf("B = {\n");
-  //   for(auto BEntry : B){
-  //     printf("{%d, (", BEntry.first);
-  //     for(int BEntryS : BEntry.second){
-  //       printf("%d, ", BEntryS);
-  //     }
-  //     printf(")}\n");
-  //   }
-  //   printf("}\n");
-
-  //   printf("a = {\n");
-  //   for(auto BEntry : a){
-  //     printf("{a(%d), (", BEntry.first);
-  //     for(int BEntryS : BEntry.second){
-  //       printf("%d, ", BEntryS);
-  //     }
-  //     printf(")}\n");
-  //   }
-  //   printf("}\n");
-
-  //   printf("L = {");
-  //   for(int v : L){
-  //     printf("%d, ", v);
-  //   }
-  //   printf("}\n");
-
-  // }
-
-  // Automaton Automaton::createMinimalHopcroft(const Automaton& automaton){
-  //   fa::Automaton Calculon = createDeterministic(automaton);
-
-  //   std::set<int> statesFinal, statesNotFinal;
-
-  //   for(auto stateEntry : Calculon.state){
-  //     if(Calculon.isStateFinal(stateEntry.first)){
-  //       statesFinal.insert(stateEntry.first);
-  //     }else{
-  //       statesNotFinal.insert(stateEntry.first);
-  //     }
-  //   }
-
-  //   std::map<char, std::set<int>> W;
-  //   std::set<std::set<int>> partitions;
-  //   partitions.insert(statesFinal);
-  //   partitions.insert(statesNotFinal);
-
-  //   while(true){
-
-  //     std::set<std::set<int>> new_partitions;
-
-  //     for(auto partition : partitions){
-
-  //       for(char c : Calculon.alphabet){
-
-  //         std::map<int, std::set<int>> divided_partitions;
-
-  //         for(int state : partition){
-
-  //           std::set<int> next_state = Calculon.makeTransition({state}, c);
-
-  //           std::set<int> nst;
-
-  //           for()
-
-  //         }
-
-  //         for(auto sub_partition : divided_partitions){
-
-  //           for(int value : sub_partition.s)
-
-  //         }
-
-  //       }
-
-  //     }
-
-  //     if(new_partitions == partitions){
-  //       break;
-  //     }else{
-  //       partitions = new_partitions;
-  //     }
-
-  //   }
-
-  //   return Calculon;
-  // }
-
-  Automaton Automaton::createMinimalHopcroft(const Automaton& automaton){
-    fa::Automaton res = automaton;
     return res;
   }
 

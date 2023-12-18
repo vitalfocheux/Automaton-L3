@@ -14,6 +14,7 @@
 #include <cassert>
 #include <climits>
 #include <queue>
+#include <stack>
 #include <unordered_set>
 
 
@@ -237,11 +238,6 @@ namespace fa {
      * Create an equivalent minimal automaton with the Brzozowski algorithm
      */
     static Automaton createMinimalBrzozowski(const Automaton& other);
-
-    /**
-     * Create an equivalent minimal automaton with the Hopcroft algorith
-    */
-    static Automaton createMinimalHopcroft (const Automaton& automaton);
 
   private:
   };
