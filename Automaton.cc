@@ -385,7 +385,6 @@ namespace fa {
         break;
       }
     }
-    printf("st = %ld\n", st);
     if(st == size-1){
       if(size-1 == 0 && !fa.hasState(0)){
         st = 0;
