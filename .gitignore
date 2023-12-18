@@ -3,6 +3,7 @@ build/
 googletest/
 prepare-archive.sh
 testfa *.cc
+Automaton *.*
 *.tar*
 *.Identifier
 CMakeLists.txt
