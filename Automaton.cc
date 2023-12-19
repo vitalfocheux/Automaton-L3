@@ -11,7 +11,8 @@ namespace fa {
 
   bool Automaton::addSymbol(char symbol){
     if(isgraph(symbol)&& !hasSymbol(symbol)){
-      this->alphabet.push_back(symbol);
+      this->alphabet.insert(symbol);
+      //this->alphabet.push_back(symbol);
       return true;
     }
     return false;
@@ -33,24 +34,29 @@ namespace fa {
         }
         ++stateEntryIter;
       }
-      for(std::size_t i = 0; i < this->alphabet.size(); ++i){
-        if(this->alphabet.at(i) == symbol){
-          this->alphabet.erase(this->alphabet.begin() + i); 
-          return true;
-        }
+      if(this->alphabet.find(symbol) != this->alphabet.end()){
+        this->alphabet.erase(symbol);
+        return true;
       }
+      // for(std::size_t i = 0; i < this->alphabet.size(); ++i){
+      //   if(this->alphabet.at(i) == symbol){
+      //     this->alphabet.erase(this->alphabet.begin() + i); 
+      //     return true;
+      //   }
+      // }
     }
     return false;
   }
 
   bool Automaton::hasSymbol(char symbol) const{
     if(isgraph(symbol) && !this->alphabet.empty()){
-      std::size_t size = this->alphabet.size();
-      for(std::size_t i = 0; i < size; ++i){
-        if(this->alphabet.at(i) == symbol){
-          return true;
-        }
-      }
+      return this->alphabet.find(symbol) != this->alphabet.end();
+      // std::size_t size = this->alphabet.size();
+      // for(std::size_t i = 0; i < size; ++i){
+      //   if(this->alphabet.at(i) == symbol){
+      //     return true;
+      //   }
+      // }
     }
     return false;
   }
@@ -163,7 +169,8 @@ namespace fa {
 
   bool Automaton::addTransition(int from, char alpha, int to){
     if(!hasTransition(from, alpha, to) && (hasSymbol(alpha) || alpha == fa::Epsilon) && hasState(from) && hasState(to)){
-      this->transition[from][alpha].push_back(to);
+      this->transition[from][alpha].insert(to);
+      //this->transition[from][alpha].push_back(to);
       return true;
     }
     return false;
@@ -176,12 +183,17 @@ namespace fa {
         return true;
       }
       std::size_t size = this->state.size();
-      std::vector<int> tab = this->transition[from][alpha];
-      for(std::size_t i = 0; i < size; ++i){
-        if(tab[i] == to){
-          this->transition[from][alpha].erase(this->transition[from][alpha].begin() + i);
-          return true;
-        }
+      //std::vector<int> tab = this->transition[from][alpha];
+      std::set<int> tab = this->transition[from][alpha];
+      // for(std::size_t i = 0; i < size; ++i){
+      //   if(tab[i] == to){
+      //     this->transition[from][alpha].erase(this->transition[from][alpha].begin() + i);
+      //     return true;
+      //   }
+      // }
+      if(tab.find(to) != tab.end()){
+        this->transition[from][alpha].erase(to);
+        return true;
       }
     }
     return false; // La transition n'a pas été trouvée
@@ -192,10 +204,12 @@ namespace fa {
     if(!this->transition.empty()){
       auto fromIt = transition.find(from);
       if (fromIt != transition.end()) {
-          const std::map<char, std::vector<int>>& alphaMap = fromIt->second;
+          //const std::map<char, std::vector<int>>& alphaMap = fromIt->second;
+          const std::map<char, std::set<int>>& alphaMap = fromIt->second;
           auto alphaIt = alphaMap.find(alpha);
           if (alphaIt != alphaMap.end()) {
-              const std::vector<int>& toVector = alphaIt->second;
+              //const std::vector<int>& toVector = alphaIt->second;
+              const std::set<int>& toVector = alphaIt->second;
               return std::find(toVector.begin(), toVector.end(), to) != toVector.end();
           }
       }
@@ -381,7 +395,7 @@ namespace fa {
     std::size_t size = fa.state.size();
     for(std::size_t i = 0; i < size; ++i){
       st = i;
-      if(!fa.hasState(st)/*fa.state.find(i) == fa.state.end()*/){
+      if(fa.state.find(i) == fa.state.end()){
         break;
       }
     }
@@ -392,7 +406,6 @@ namespace fa {
         st = size;
       }
     }
-    
     fa.addState(st);
     for(char letter : fa.alphabet){
       fa.addTransition(st, letter, st);
@@ -545,32 +558,62 @@ namespace fa {
     }
   }
 
-  bool Automaton::isLanguageEmpty() const{
-    assert(this->isValid());
-    std::vector<int> visited;
-
-    bool hasInitial = false;
-
-    for(auto stateEntry : this->state){
-      if(this->isStateInitial(stateEntry.first)){
-        hasInitial = true;
-        break;
-      }
-    }
-
-    if(!hasInitial){
-      return true;
-    }
-
-    for(auto stateEntry : this->state){
-      if(isStateInitial(stateEntry.first)){
-        //visited.push_back(stateEntry.first);
-        visitedGraph(this, visited, stateEntry.first);
-        for(int state : visited){
-          if(this->isStateFinal(state)){
-            return false;
+  void DepthFirstSearch(const Automaton* fa, std::set<int>& visited, int state){
+    visited.insert(state);
+    std::stack<int> stack;
+    stack.push(state);
+    while(!stack.empty()){
+      int s = stack.top();
+      stack.pop();
+      for(char letter : fa->alphabet){
+        std::set<int> transitions = fa->makeTransition({s}, letter);
+        for(int value : transitions){
+          if(visited.find(value) == visited.end()){
+            visited.insert(value);
+            stack.push(value);
           }
         }
+      }
+    }
+  }
+
+  bool Automaton::isLanguageEmpty() const{
+    assert(this->isValid());
+    // std::vector<int> visited;
+
+    // bool hasInitial = false;
+
+    // for(auto stateEntry : this->state){
+    //   if(this->isStateInitial(stateEntry.first)){
+    //     hasInitial = true;
+    //     break;
+    //   }
+    // }
+
+    // if(!hasInitial){
+    //   return true;
+    // }
+
+    // for(auto stateEntry : this->state){
+    //   if(isStateInitial(stateEntry.first)){
+    //     //visited.push_back(stateEntry.first);
+    //     visitedGraph(this, visited, stateEntry.first);
+    //     for(int state : visited){
+    //       if(this->isStateFinal(state)){
+    //         return false;
+    //       }
+    //     }
+    //   }
+    // }
+    std::set<int> visited;
+    for(auto stateEntry : this->state){
+      if(this->isStateInitial(stateEntry.first)){
+        DepthFirstSearch(this, visited, stateEntry.first);
+      }
+    }
+    for(int state : visited){
+      if(this->isStateFinal(state)){
+        return false;
       }
     }
     return true;
@@ -578,24 +621,40 @@ namespace fa {
 
   void Automaton::removeNonAccessibleStates(){
     assert(this->isValid());
-    std::vector<int> visited;
+    // std::vector<int> visited;
+    // for(auto stateEntry : this->state){
+    //   if(this->isStateInitial(stateEntry.first) /*stateEntry.second == INITIAL_STATE || stateEntry.second == FINAL_AND_INITIAL_STATE*/){
+    //     visited.push_back(stateEntry.first);
+    //     if(this->transition.find(stateEntry.first) != this->transition.end()){
+    //       visitedGraph(this, visited, stateEntry.first);
+    //     }
+    //   }
+    // }
+    // std::size_t size = this->state.size();
+    // for(std::size_t  i = 0; i < size; ++i){
+    //   for(auto stateEntry : this->state){
+    //     if(std::find(visited.begin(), visited.end(), stateEntry.first) == visited.end()){
+    //       this->removeState(stateEntry.first);
+    //       break;
+    //     }
+    //   }
+    // }
+    std::set<int> visited;
+    std::set<int> toRemove;
     for(auto stateEntry : this->state){
-      if(this->isStateInitial(stateEntry.first) /*stateEntry.second == INITIAL_STATE || stateEntry.second == FINAL_AND_INITIAL_STATE*/){
-        visited.push_back(stateEntry.first);
-        if(this->transition.find(stateEntry.first) != this->transition.end()){
-          visitedGraph(this, visited, stateEntry.first);
-        }
+      if(this->isStateInitial(stateEntry.first)){
+        DepthFirstSearch(this, visited, stateEntry.first);
+      }else{
+        toRemove.insert(stateEntry.first);
       }
     }
-    std::size_t size = this->state.size();
-    for(std::size_t  i = 0; i < size; ++i){
-      for(auto stateEntry : this->state){
-        if(std::find(visited.begin(), visited.end(), stateEntry.first) == visited.end()){
-          this->removeState(stateEntry.first);
-          break;
-        }
+
+    for(int state : toRemove){
+      if(visited.find(state) == visited.end()){
+        this->removeState(state);
       }
     }
+
     if(!this->isValid()){
       this->addState(0);
       this->setStateInitial(0);
@@ -1097,13 +1156,13 @@ namespace fa {
   Automaton Automaton::createMinimalMoore(const Automaton& other){
     assert(other.isValid());
     fa::Automaton res = other;
-    
+    res.removeNonAccessibleStates();
     res = fa::Automaton::createDeterministic(res);
     /*if(!res.isDeterministic()){
       return res;
     }*/
-    // res.removeNonAccessibleStates();
     res = fa::Automaton::createComplete(res);
+    
     
 
     std::map<int, std::map<char, int>> init, init_next;
@@ -1437,6 +1496,7 @@ namespace fa {
         }*/
       }
     }
+
     return res_final;
   }
 

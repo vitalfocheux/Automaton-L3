@@ -16,6 +16,7 @@
 #include <climits>
 #include <queue>
 #include <time.h>
+#include <chrono>
 
 #define N 2500
 
@@ -3651,50 +3652,47 @@ TEST(createIntersection, lhsNoTransitionAndRhsNoTransition){
   EXPECT_FALSE(inter.match(""));
 }
 
-// TEST(testCreateIntersection, testHugeAutomaton)
-// {
-//   int nbStates = 35;
+TEST(testCreateIntersection, testHugeAutomaton)
+{
+  int nbStates = 150;
 
-//   fa::Automaton begin150A;
-//   begin150A.addState(0);
-//   begin150A.setStateInitial(0);
-//   begin150A.addSymbol('a');
-//   begin150A.addSymbol('b');
-//   for (int i = 1; i < nbStates; i++)
-//   {
-//     begin150A.addState(i);
-//     begin150A.addTransition(i - 1, 'a', i);
-//   }
-//   begin150A.addState(nbStates);
-//   begin150A.setStateFinal(nbStates);
-//   begin150A.addTransition(nbStates - 1, 'a', nbStates);
-//   begin150A.addTransition(nbStates, 'b', nbStates);
-//   begin150A.addTransition(nbStates, 'a', nbStates);
+  fa::Automaton begin150A;
+  begin150A.addState(0);
+  begin150A.setStateInitial(0);
+  begin150A.addSymbol('a');
+  begin150A.addSymbol('b');
+  for (int i = 1; i < nbStates; i++)
+  {
+    begin150A.addState(i);
+    begin150A.addTransition(i - 1, 'a', i);
+  }
+  begin150A.addState(nbStates);
+  begin150A.setStateFinal(nbStates);
+  begin150A.addTransition(nbStates - 1, 'a', nbStates);
+  begin150A.addTransition(nbStates, 'b', nbStates);
+  begin150A.addTransition(nbStates, 'a', nbStates);
 
-//   fa::Automaton end150A;
-//   end150A.addState(0);
-//   end150A.setStateInitial(0);
-//   end150A.addSymbol('a');
-//   end150A.addSymbol('b');
-//   for (int i = 1; i < nbStates; i++)
-//   {
-//     end150A.addState(i);
-//     end150A.addTransition(i - 1, 'a', i);
-//   }
-//   end150A.addState(nbStates);
-//   end150A.setStateFinal(nbStates);
-//   end150A.addTransition(nbStates - 1, 'a', nbStates);
-//   end150A.addTransition(0, 'b', 0);
-//   end150A.addTransition(0, 'a', 0);
+  fa::Automaton end150A;
+  end150A.addState(0);
+  end150A.setStateInitial(0);
+  end150A.addSymbol('a');
+  end150A.addSymbol('b');
+  for (int i = 1; i < nbStates; i++)
+  {
+    end150A.addState(i);
+    end150A.addTransition(i - 1, 'a', i);
+  }
+  end150A.addState(nbStates);
+  end150A.setStateFinal(nbStates);
+  end150A.addTransition(nbStates - 1, 'a', nbStates);
+  end150A.addTransition(0, 'b', 0);
+  end150A.addTransition(0, 'a', 0);
 
-//   printf("Debut de createIntersection\n");
-//   fa::Automaton intersection = fa::Automaton::createIntersection(begin150A, end150A);
-//   printf("Debut intersection is included in begin150A\n");
-//   EXPECT_TRUE(intersection.isIncludedIn(begin150A));
-//   printf("Debut intersection is included in end150A\n");
-//   EXPECT_TRUE(intersection.isIncludedIn(end150A));
-//   printf("Fin\n");
-// }
+
+  fa::Automaton intersection = fa::Automaton::createIntersection(begin150A, end150A);
+  EXPECT_TRUE(intersection.isIncludedIn(begin150A));
+  EXPECT_TRUE(intersection.isIncludedIn(end150A));
+}
 
 TEST(hasEmptyIntersectionWith, noEmpty){
   fa::Automaton lhs, rhs;
@@ -4419,7 +4417,6 @@ TEST(createMinimalMoore, NonAccessibleState){
   words.insert("");
 
   fa::Automaton n = fa::Automaton::createMinimalMoore(fa);
-  n.prettyPrint(std::cout);
   EXPECT_TRUE(n.isValid());
   EXPECT_FALSE(n.isLanguageEmpty());
   EXPECT_EQ(n.countStates(), 1u);
@@ -4452,7 +4449,6 @@ TEST(createMinimalMoore, NonAccessibleStatesWithTransition){
   words.insert("");
 
   fa::Automaton n = fa::Automaton::createMinimalMoore(fa);
-  n.prettyPrint(std::cout);
   EXPECT_TRUE(n.isValid());
   EXPECT_FALSE(n.isLanguageEmpty());
   EXPECT_EQ(n.countStates(), 1u);
@@ -4487,7 +4483,6 @@ TEST(createMinimalMoore, NonAccessibleStatesWithTransitionNonDeterminist){
   words.insert("");
 
   fa::Automaton n = fa::Automaton::createMinimalMoore(fa);
-  n.prettyPrint(std::cout);
   EXPECT_TRUE(n.isValid());
   EXPECT_FALSE(n.isLanguageEmpty());
   EXPECT_EQ(n.countStates(), 1u);
@@ -5021,7 +5016,6 @@ TEST(createMinimalMoore, NonAccessibleStatePereiraGehant){
   words.insert("");
 
   fa::Automaton n = fa::Automaton::createMinimalMoore(fa);
-  n.prettyPrint(std::cout);
   EXPECT_TRUE(n.isValid());
   EXPECT_FALSE(n.isLanguageEmpty());
   EXPECT_EQ(n.countStates(), 2u);
@@ -5238,7 +5232,6 @@ TEST(createMinimalBrzozowski, NonAccessibleState){
   words.insert("");
 
   fa::Automaton n = fa::Automaton::createMinimalBrzozowski(fa);
-  n.prettyPrint(std::cout);
   EXPECT_TRUE(n.isValid());
   EXPECT_FALSE(n.isLanguageEmpty());
   EXPECT_EQ(n.countStates(), 1u);
@@ -5271,7 +5264,6 @@ TEST(createMinimalBrzozowski, NonAccessibleStatesWithTransition){
   words.insert("");
 
   fa::Automaton n = fa::Automaton::createMinimalBrzozowski(fa);
-  n.prettyPrint(std::cout);
   EXPECT_TRUE(n.isValid());
   EXPECT_FALSE(n.isLanguageEmpty());
   EXPECT_EQ(n.countStates(), 1u);
@@ -5306,7 +5298,6 @@ TEST(createMinimalBrzozowski, NonAccessibleStatesWithTransitionNonDeterminist){
   words.insert("");
 
   fa::Automaton n = fa::Automaton::createMinimalBrzozowski(fa);
-  n.prettyPrint(std::cout);
   EXPECT_TRUE(n.isValid());
   EXPECT_FALSE(n.isLanguageEmpty());
   EXPECT_EQ(n.countStates(), 1u);
@@ -5840,7 +5831,6 @@ TEST(createMinimalBrzozowski, NonAccessibleStatePereiraGehant){
   words.insert("");
 
   fa::Automaton n = fa::Automaton::createMinimalBrzozowski(fa);
-  n.prettyPrint(std::cout);
   EXPECT_TRUE(n.isValid());
   EXPECT_FALSE(n.isLanguageEmpty());
   EXPECT_EQ(n.countStates(), 2u);
@@ -5853,98 +5843,6 @@ TEST(createMinimalBrzozowski, NonAccessibleStatePereiraGehant){
   EXPECT_TRUE(n.isComplete());
   EXPECT_TRUE(equivalent(fa, n));
 }
-
-// TEST(Aléatoire, Aléatoire){
-//   fa::Automaton fa, moore, brzozowski;
-
-//   words = {};
-//   for(std::size_t i = 1; i < 11; ++i){
-//     std::string chaine;
-//     enumer_chaines(chaine, i);
-//   }
-//   words.insert("");
-
-//   srand(time(NULL));
-//   for(int j = 0; j < N; ++j){
-//     // Ajouter les états
-//     for (int i = 0; i < 10; ++i) {
-//       fa.addState(i);
-//     }
-
-//     // Ajouter les symboles
-//     fa.addSymbol('a');
-//     fa.addSymbol('b');
-
-//     // Ajouter les transitions aléatoires
-//     srand(time(NULL));
-//     for (int i = 0; i < 20; ++i) {
-//       int sourceState = rand() % 10;
-//       int targetState = rand() % 10;
-//       char symbol = (rand() % 2 == 0) ? 'a' : 'b';
-//       fa.addTransition(sourceState, symbol, targetState);
-//     }
-
-//     int initialState = rand() % 10;
-//     int finalState = rand() % 10;
-
-//     // Définir l'état initial et final
-//     fa.setStateInitial(initialState);
-//     fa.setStateFinal(finalState);
-
-//     moore = fa::Automaton::createMinimalMoore(fa);
-//     brzozowski = fa::Automaton::createMinimalBrzozowski(fa);
-
-//     EXPECT_TRUE(moore.isValid());
-//     EXPECT_TRUE(brzozowski.isValid());
-//     EXPECT_TRUE(moore.isDeterministic());
-//     EXPECT_TRUE(brzozowski.isDeterministic());
-//     EXPECT_TRUE(moore.isComplete());
-//     EXPECT_TRUE(brzozowski.isComplete());
-//     EXPECT_TRUE(equivalent(fa, moore));
-//     EXPECT_TRUE(equivalent(fa, brzozowski));
-//     EXPECT_EQ(moore.countStates(), brzozowski.countStates());
-//     if(moore.countStates() != brzozowski.countStates()){
-//       std::cout << "moore : " << std::endl;
-//       moore.prettyPrint(std::cout);
-//       std::cout << "brzozowski : " << std::endl;
-//       brzozowski.prettyPrint(std::cout);
-//     }
-//   }
-// }
-
-// TEST(test, test){
-//   fa::Automaton fa;
-
-//   fa.addState(0);
-//   fa.addState(1);
-//   fa.addState(2);
-//   fa.addState(3);
-//   fa.addSymbol('a'); fa.addSymbol('b');
-
-//   fa.addTransition(0, 'a', 1);
-//   fa.addTransition(0, 'b', 2);
-//   fa.addTransition(1, 'a', 3);
-//   fa.addTransition(1, 'b', 3);
-//   fa.addTransition(2, 'a', 2);
-//   fa.addTransition(2, 'b', 2);
-//   fa.addTransition(3, 'a', 3);
-//   fa.addTransition(3, 'b', 3);
-
-//   fa.setStateInitial(0);
-//   fa.setStateFinal(1);
-//   fa.setStateFinal(3);
-
-//   fa::Automaton moore = fa::Automaton::createMinimalMoore(fa);
-
-//   EXPECT_TRUE(moore.isValid());
-//   EXPECT_EQ(moore.countStates(), 1u);
-//   EXPECT_EQ(moore.countSymbols(), 2u);
-//   EXPECT_TRUE(moore.hasSymbol('a'));
-//   EXPECT_TRUE(moore.hasSymbol('b'));
-//   EXPECT_TRUE(moore.isDeterministic());
-//   EXPECT_TRUE(moore.isComplete());
-//   EXPECT_TRUE(equivalent(fa, moore));
-// }
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);

@@ -16,6 +16,7 @@
 #include <queue>
 #include <stack>
 #include <unordered_set>
+#include <chrono>
 
 
 namespace fa {
@@ -27,9 +28,9 @@ namespace fa {
 
   class Automaton {
   public:
-    std::vector<char> alphabet;
+    std::set<char> alphabet;
     std::map<int, int> state;
-    std::map<int, std::map<char, std::vector<int>>> transition;
+    std::map<int, std::map<char, std::set<int>>> transition;
     /**
      * Build an empty automaton (no state, no transition).
      */
