@@ -10,55 +10,54 @@ namespace fa {
   }
 
   bool Automaton::addSymbol(char symbol){
-    if(isgraph(symbol)&& !hasSymbol(symbol)){
-      this->alphabet.insert(symbol);
-      //this->alphabet.push_back(symbol);
+    /**
+     * Si symbol n'est pas un caractère imprimable ou si il est déjà présent dans l'alphabet,
+     * on ne l'ajoute pas
+    */
+    if(!isgraph(symbol) || hasSymbol(symbol)){
+      return false;
+    }
+    return this->alphabet.insert(symbol).second;
+  }
+
+  bool Automaton::removeSymbol(char symbol){
+    /**
+     * Si symbol n'est pas un caractère imprimable ou si il n'est pas présent dans l'alphabet,
+     * on ne le supprime pas
+    */
+    if(!isgraph(symbol) || this->alphabet.empty() || !hasSymbol(symbol)){
+      return false;
+    }
+    auto stateEntryIter = this->transition.begin();
+    while (stateEntryIter != this->transition.end()) {
+      auto& letterEntry = stateEntryIter->second;
+      auto letterEntryIter = letterEntry.begin();
+      while (letterEntryIter != letterEntry.end()) {
+        if(letterEntryIter->first == symbol){
+          //remove dans transition si il est une transition
+          letterEntryIter = this->transition.at(stateEntryIter->first).erase(letterEntryIter);
+          break;
+        }
+        ++letterEntryIter;
+      }
+      ++stateEntryIter;
+    }
+    if(this->alphabet.find(symbol) != this->alphabet.end()){
+      this->alphabet.erase(symbol);
       return true;
     }
     return false;
   }
 
-  bool Automaton::removeSymbol(char symbol){
-    if(isgraph(symbol) && !this->alphabet.empty() && hasSymbol(symbol)){
-      auto stateEntryIter = this->transition.begin();
-      while (stateEntryIter != this->transition.end()) {
-        auto& letterEntry = stateEntryIter->second;
-        auto letterEntryIter = letterEntry.begin();
-        while (letterEntryIter != letterEntry.end()) {
-          if(letterEntryIter->first == symbol){
-            //remove dans transition si il est une transition
-            letterEntryIter = this->transition.at(stateEntryIter->first).erase(letterEntryIter);
-            break;
-          }
-          ++letterEntryIter;
-        }
-        ++stateEntryIter;
-      }
-      if(this->alphabet.find(symbol) != this->alphabet.end()){
-        this->alphabet.erase(symbol);
-        return true;
-      }
-      // for(std::size_t i = 0; i < this->alphabet.size(); ++i){
-      //   if(this->alphabet.at(i) == symbol){
-      //     this->alphabet.erase(this->alphabet.begin() + i); 
-      //     return true;
-      //   }
-      // }
-    }
-    return false;
-  }
-
   bool Automaton::hasSymbol(char symbol) const{
-    if(isgraph(symbol) && !this->alphabet.empty()){
-      return this->alphabet.find(symbol) != this->alphabet.end();
-      // std::size_t size = this->alphabet.size();
-      // for(std::size_t i = 0; i < size; ++i){
-      //   if(this->alphabet.at(i) == symbol){
-      //     return true;
-      //   }
-      // }
+    /**
+     * Si symbol n'est pas un caractère imprimable ou si l'alphabet est vide, on retoune false
+     * Sinon on regarde si symbol est présent dans l'alphabet et retourne true si c'est le cas
+    */
+    if(!isgraph(symbol) || this->alphabet.empty()){
+      return false;
     }
-    return false;
+    return this->alphabet.find(symbol) != this->alphabet.end();
   }
 
   std::size_t Automaton::countSymbols() const{
@@ -66,51 +65,65 @@ namespace fa {
   }
 
   bool Automaton::addState(int state){
-    if(!hasState(state) && state >= 0){
-      this->state.insert(std::make_pair(state, 0));
-      return true;
+    /**
+     * Si l'état est déjà présent dans l'automate ou si l'état est négatif, on ne l'ajoute pas
+     * Sinon on l'ajoute
+    */
+    if(hasState(state) || state < 0){
+      return false;
     }
-    return false;
+    return  this->state.insert(std::make_pair(state, 0)).second;
   }
 
   bool Automaton::removeState(int state){
-    if(hasState(state)){
-        auto stateEntryIter = this->transition.begin();
-        while (stateEntryIter != this->transition.end()) {
-            auto& letterEntry = stateEntryIter->second;
-            auto letterEntryIter = letterEntry.begin();
-            while (letterEntryIter != letterEntry.end()) {
-                auto& values = letterEntryIter->second;
-                auto it = std::find(values.begin(), values.end(), state);
-                if (it != values.end()) {
-                    values.erase(it);
-                    if (values.empty()) {
-                        letterEntryIter = letterEntry.erase(letterEntryIter);
-                        continue;
-                    }
-                }
-                ++letterEntryIter;
-            }
-
-            if (stateEntryIter->first == state) {
-                stateEntryIter = this->transition.erase(stateEntryIter);
-            } else {
-                ++stateEntryIter;
-            }
-        }
-
-        this->state.erase(state);
-        return true;
+    if(!hasState(state)){
+      return false;
     }
-    return false;
+    auto stateEntryIter = this->transition.begin();
+    while (stateEntryIter != this->transition.end()) {
+      auto& letterEntry = stateEntryIter->second;
+      auto letterEntryIter = letterEntry.begin();
+      while (letterEntryIter != letterEntry.end()) {
+        auto& values = letterEntryIter->second;
+        auto it = std::find(values.begin(), values.end(), state);
+        if (it != values.end()) {
+          /**
+           * Si la transition contient la valeur, on la supprime
+          */
+          values.erase(it);
+          /**
+           * Si la transition ne contient plus de valeur, on la supprime
+          */
+          if (values.empty()) {
+              letterEntryIter = letterEntry.erase(letterEntryIter);
+              continue;
+          }
+        }
+        ++letterEntryIter;
+      }
+      if (stateEntryIter->first == state) {
+        /**
+         * Si l'état est l'état de départ de la transition, on supprime la transition
+        */
+        stateEntryIter = this->transition.erase(stateEntryIter);
+      } else {
+        ++stateEntryIter;
+      }
+    }
+    this->state.erase(state);
+    return true;
 }
 
 
   bool Automaton::hasState(int state) const{
-    if(!this->state.empty()){
-      return this->state.find(state) != this->state.end();
+    /**
+     * Si il n'y a pas d'état dans l'automate, on retourne false
+     * Sinon on regarde si l'état est présent dans l'automate et retourne true si c'est le cas
+    */
+    if(this->state.empty()){ 
+      return false;
     }
-    return false;
+    return this->state.find(state) != this->state.end();
   }
 
   std::size_t Automaton::countStates() const{
@@ -118,109 +131,135 @@ namespace fa {
   }
 
   void Automaton::setStateInitial(int state){
-    if(hasState(state)){
-      for(auto& pair : this->state){
-        if(pair.first == state){
-          if(pair.second == FINAL_STATE){
-            pair.second = FINAL_AND_INITIAL_STATE;
-          }else{
-            pair.second = INITIAL_STATE;
-          }
+    /**
+     * Si l'état n'est pas présent dans l'automate, on ne fait rien
+    */
+    if(!hasState(state)){
+      return;
+    }
+    /**
+     * Sinon on parcours les etats de l'automate et on change l'état initial
+    */
+    for(auto& pair : this->state){
+      if(pair.first == state){
+        if(pair.second == FINAL_STATE){
+          pair.second = FINAL_AND_INITIAL_STATE;
+        }else{
+          pair.second = INITIAL_STATE;
         }
       }
     }
   }
 
   bool Automaton::isStateInitial(int state) const{
-    if(hasState(state)){
-      for(auto& pair : this->state){
-        if(pair.first == state){
-          return pair.second == INITIAL_STATE || pair.second == FINAL_AND_INITIAL_STATE;
-        }
+    /**
+     * Si l'état n'est pas présent dans l'automate, on retourne false
+     * Sinon on regarde si l'état est initial et retourne true si c'est le cas
+    */
+    if(!hasState(state)){
+      return false;
+    }
+    for(const auto& pair : this->state){
+      if(pair.first == state){
+        return pair.second == INITIAL_STATE || pair.second == FINAL_AND_INITIAL_STATE;
       }
     }
     return false;
   }
 
   void Automaton::setStateFinal(int state){
-    if(hasState(state)){
-      for(auto& pair : this->state){
-        if(pair.first == state){
-          if(pair.second == INITIAL_STATE){
-            pair.second = FINAL_AND_INITIAL_STATE;
-          }else{
-            pair.second = FINAL_STATE;
-          }
+    /**
+     * Si l'état n'est pas présent dans l'automate, on ne fait rien
+    */
+    if(!hasState(state)){
+      return;
+    }
+    /**
+     * Sinon on parcours les etats de l'automate et on change l'état final
+    */
+    for(auto& pair : this->state){
+      if(pair.first == state){
+        if(pair.second == INITIAL_STATE){
+          pair.second = FINAL_AND_INITIAL_STATE;
+        }else{
+          pair.second = FINAL_STATE;
         }
       }
     }
   }
 
   bool Automaton::isStateFinal(int state) const{
-    if(hasState(state)){
-      for(auto& pair : this->state){
-        if(pair.first == state){
-          return pair.second == FINAL_STATE || pair.second == FINAL_AND_INITIAL_STATE;
-        }
+    /**
+     * Si l'état n'est pas présent dans l'automate, on retourne false
+     * Sinon on regarde si l'état est final et retourne true si c'est le cas
+    */
+    if(!hasState(state)){
+      return false;
+    }
+    for(const auto& pair : this->state){
+      if(pair.first == state){
+        return pair.second == FINAL_STATE || pair.second == FINAL_AND_INITIAL_STATE;
       }
     }
     return false;
   }
 
   bool Automaton::addTransition(int from, char alpha, int to){
-    if(!hasTransition(from, alpha, to) && (hasSymbol(alpha) || alpha == fa::Epsilon) && hasState(from) && hasState(to)){
-      this->transition[from][alpha].insert(to);
-      //this->transition[from][alpha].push_back(to);
-      return true;
+    /**
+     * Si la transition est déjà présente dans l'automate ou si le symbole n'est pas présent dans l'alphabet ou si l'état de départ ou d'arrivée n'est pas présent dans l'automate, on retourne false
+     * Sinon on ajoute la transition
+    */
+    if(hasTransition(from, alpha, to) || (!hasSymbol(alpha) && alpha != fa::Epsilon) || !hasState(from) || !hasState(to)){
+      return false;
     }
-    return false;
+    return this->transition[from][alpha].insert(to).second;
   }
 
   bool Automaton::removeTransition(int from, char alpha, int to) {
-    if(hasTransition(from, alpha, to) && (hasSymbol(alpha) || alpha == fa::Epsilon) && hasState(from) && hasState(to)){
-      if(alpha == fa::Epsilon){
-        this->transition[from].erase(alpha);
-        return true;
-      }
-      std::size_t size = this->state.size();
-      //std::vector<int> tab = this->transition[from][alpha];
-      std::set<int> tab = this->transition[from][alpha];
-      // for(std::size_t i = 0; i < size; ++i){
-      //   if(tab[i] == to){
-      //     this->transition[from][alpha].erase(this->transition[from][alpha].begin() + i);
-      //     return true;
-      //   }
-      // }
-      if(tab.find(to) != tab.end()){
-        this->transition[from][alpha].erase(to);
-        return true;
-      }
+    /**
+     * Si la transition n'est pas présente dans l'automate ou si le symbole n'est pas présent dans l'alphabet ou si l'état de départ ou d'arrivée n'est pas présent dans l'automate, on retourne false
+    */
+    if(!hasTransition(from, alpha, to) || (!hasSymbol(alpha) && alpha != fa::Epsilon) || !hasState(from) || !hasState(to)){
+      return false;
+    }
+    /**
+     * Si le symbole est epsilon, on supprime toutes les transitions epsilon
+    */
+    if(alpha == fa::Epsilon){
+      this->transition[from].erase(alpha);
+      return true;
+    }
+    /**
+     * Si la transition est présente dans l'automate, on la supprime
+    */
+    if(this->transition[from][alpha].find(to) != this->transition[from][alpha].end()){
+      this->transition[from][alpha].erase(to);
+      return true;
     }
     return false; // La transition n'a pas été trouvée
 }
 
 
   bool Automaton::hasTransition(int from, char alpha, int to) const{
-    if(!this->transition.empty()){
-      auto fromIt = transition.find(from);
-      if (fromIt != transition.end()) {
-          //const std::map<char, std::vector<int>>& alphaMap = fromIt->second;
-          const std::map<char, std::set<int>>& alphaMap = fromIt->second;
-          auto alphaIt = alphaMap.find(alpha);
-          if (alphaIt != alphaMap.end()) {
-              //const std::vector<int>& toVector = alphaIt->second;
-              const std::set<int>& toVector = alphaIt->second;
-              return std::find(toVector.begin(), toVector.end(), to) != toVector.end();
-          }
-      }
-    } 
-    return false;
+    /**
+     * Si la transition est vide, on retourne false
+     * Sinon on regarde si la transition est présente dans l'automate et retourne true si c'est le cas
+    */
+    if(this->transition.empty()){
+      return false;
+    }
+    return (this->transition.find(from) != this->transition.end() 
+            && this->transition.at(from).find(alpha) != this->transition.at(from).end() 
+            && this->transition.at(from).at(alpha).find(to) != this->transition.at(from).at(alpha).end());
   }
 
   std::size_t Automaton::countTransitions() const{
+    /**
+     * On parcours les transitions de l'automate et on incrémente res pour chaque transition
+    */
     std::size_t res = 0;
-    for(auto stateEntry : this->transition){
-      for(auto letterEntry : stateEntry.second){
+    for(const auto& stateEntry : this->transition){
+      for(const auto& letterEntry : stateEntry.second){
         res += letterEntry.second.size();
       }
     }
@@ -229,24 +268,24 @@ namespace fa {
 
   void Automaton::prettyPrint(std::ostream& os) const{
     os << "Initial states:\n\t";
-    for(auto& pair : this->state){
-      if(pair.second == INITIAL_STATE || pair.second == FINAL_AND_INITIAL_STATE){
+    for(const auto& pair : this->state){
+      if(this->isStateInitial(pair.first)){
         os << pair.first << " ";
       }
     }
     os << "\nFinal states:\n\t";
-    for(auto& pair : this->state){
-      if(pair.second == FINAL_STATE || pair.second == FINAL_AND_INITIAL_STATE){
+    for(const auto& pair : this->state){
+      if(this->isStateFinal(pair.first)){
         os << pair.first << " ";
       }
     }
     os << "\nTransitions:" << std::endl;
-    for(auto stateEntry : this->state){
+    for(const auto& stateEntry : this->state){
       os << "\tFor state " << stateEntry.first << ":" << std::endl;
-      for(char letter : this->alphabet){
+      for(const char& letter : this->alphabet){
         os << "\t\tFor letter " << letter << ": ";
         if(this->transition.find(stateEntry.first) != this->transition.end() && this->transition.at(stateEntry.first).find(letter) != this->transition.at(stateEntry.first).end()){
-          for(auto& value : this->transition.at(stateEntry.first).at(letter)){
+          for(const auto& value : this->transition.at(stateEntry.first).at(letter)){
             os << value << " ";
           }
           
@@ -254,21 +293,6 @@ namespace fa {
         os << std::endl;
       }
     }
-    /*
-    for(auto& stateEntry : this->transition){
-      os << "\tFor state " << stateEntry.first << ":" << std::endl;
-      for(char letter : this->alphabet){
-        os << "\t\tFor letter " << letter << ": ";
-        if(this->transition.at(stateEntry.first).find(letter) != this->transition.at(stateEntry.first).end()){
-          for(auto& value : this->transition.at(stateEntry.first).at(letter)){
-            os << value << " ";
-          }
-          
-        }
-        os << std::endl;
-      }
-    }
-    */
   }
 
   void Automaton::dotPrint(std::ostream& os) const{
@@ -290,7 +314,7 @@ namespace fa {
         os << "\trankdir=LR;" << std::endl;
         os << "\tnode [shape = doublecircle, color=blue, style=filled, fillcolor=white]; ";
         for(auto stateEntry : this->state){
-          if(isStateFinal(stateEntry.first)/*stateEntry.second == FINAL_STATE || stateEntry.second == FINAL_AND_INITIAL_STATE*/){
+          if(isStateFinal(stateEntry.first)){
             hasFinal = true;
             os << stateEntry.first << " ";
           }
@@ -321,8 +345,12 @@ namespace fa {
 
   bool Automaton::hasEpsilonTransition() const{
     assert(isValid());
-    for(auto stateEntry : this->transition){
-      for(auto letterEntry : stateEntry.second){
+    /**
+     * On parcours les transitions de l'automate et on regarde si il y a une transition epsilon et retourne true si c'est le cas
+     * Sinon on retourne false
+    */
+    for(const auto& stateEntry : this->transition){
+      for(const auto& letterEntry : stateEntry.second){
         if(letterEntry.first == fa::Epsilon){
           return true;
         }
@@ -334,8 +362,13 @@ namespace fa {
   bool Automaton::isDeterministic() const{
     assert(isValid());
     bool hasInitial = false;
-    for(auto stateEntry : this->state){
-      if(isStateInitial(stateEntry.first)/*stateEntry.second == INITIAL_STATE || stateEntry.second == FINAL_AND_INITIAL_STATE*/){
+    /**
+     * On parcours les états de l'automate et on regarde si il y a un état initial
+     * Si il y en a plusieurs, on retourne false
+     * Si il y en a aucun, on retourne false
+    */
+    for(const auto& stateEntry : this->state){
+      if(isStateInitial(stateEntry.first)){
         if(hasInitial){
           return false;
         }
@@ -345,8 +378,12 @@ namespace fa {
     if(!hasInitial){
       return false;
     }
-    for(auto stateEntry : this->transition){
-      for(auto letterEntry : stateEntry.second){
+    /**
+     * Sinon on parcours les transitions de l'automate et on regarde si il y a plusieurs transitions pour un même état et un même symbole, si c'est le cas on retourne false
+     * Sinon on retourne true
+    */
+    for(const auto& stateEntry : this->transition){
+      for(const auto& letterEntry : stateEntry.second){
         if(letterEntry.second.size() > 1){
           return false;
         }
@@ -357,13 +394,18 @@ namespace fa {
 
   bool Automaton::isComplete() const{
     assert(isValid());
-
-    for(auto stateEntry : this->state){
+    /**
+     * On parcours les états de l'automate et on regarde si il y a une transition qui part de l'état pour chaque symbole de l'alphabet
+     * Si il y a aucune transition pour un état, on retourne false
+     * Si pour chaque symbol de l'alphabet il n'y a pas au moins une transition, on retourne false
+     * Sinon on retourne true
+    */
+    for(const auto& stateEntry : this->state){
       if(this->transition.find(stateEntry.first) == this->transition.end()){
         return false;
       }
       std::size_t size = 0;
-      for(char letter : this->alphabet){
+      for(const char& letter : this->alphabet){
         if(this->transition.at(stateEntry.first).find(letter) != this->transition.at(stateEntry.first).end() && this->transition.at(stateEntry.first).at(letter).size() > 0){
           ++size;
         }
@@ -377,6 +419,10 @@ namespace fa {
 
   Automaton Automaton::createComplete(const Automaton& automaton){
     assert(automaton.isValid());
+    /**
+     * Si l'automate reconnaît le langage vide, on retourne un automate qui reconnaît le langage vide 
+     * avec un état initial et une transition pour chaque symbole de l'alphabet qui part de l'état initial vers lui-même
+    */
     if(automaton.isLanguageEmpty()){
       fa::Automaton res;
       res.alphabet = automaton.alphabet;
@@ -387,12 +433,19 @@ namespace fa {
       }
       return res;
     }
+    /**
+     * Si l'automate est déjà complet, on retourne l'automate
+    */
     if(automaton.isComplete()){
       return automaton;
     }
     fa::Automaton fa = automaton;
     std::size_t st = 0;
     std::size_t size = fa.state.size();
+    /**
+     * On parcours les états de l'automate et on regarde si il y a un état qui n'est pas présent dans l'automate
+     * Si c'est le cas cela sera l'automate poubelle qui servira pour la complétion de l'automate
+    */
     for(std::size_t i = 0; i < size; ++i){
       st = i;
       if(fa.state.find(i) == fa.state.end()){
@@ -400,6 +453,10 @@ namespace fa {
       }
     }
     if(st == size-1){
+      /**
+       * st passe à 0 si le nombre d'états et de 1 et que l'état 0 n'est pas présent dans l'automate
+       * (Résolution pour la complétion de l'automate pour les cas de minimalMoore)
+      */
       if(size-1 == 0 && !fa.hasState(0)){
         st = 0;
       }else{
@@ -407,11 +464,19 @@ namespace fa {
       }
     }
     fa.addState(st);
-    for(char letter : fa.alphabet){
+    /**
+     * On ajoute une transition pour chaque symbole de l'alphabet qui part de l'état poubelle vers lui-même
+    */
+    for(const char& letter : fa.alphabet){
       fa.addTransition(st, letter, st);
     }
-    for(auto stateEntry : fa.state){
-        for(char letter : fa.alphabet){
+    /**
+     * On parcours les états de l'automate et on regarde 
+     * si il y a une transition qui part de l'état pour chaque symbole de l'alphabet
+     * Si il y a aucune transition pour un état, on ajoute une transition pour chaque symbole de l'alphabet qui part de l'état vers l'état poubelle
+    */
+    for(const auto& stateEntry : fa.state){
+        for(const char& letter : fa.alphabet){
           if(fa.transition.find(stateEntry.first) == fa.transition.end()){
             fa.addTransition(stateEntry.first, letter, st);
           }else if(fa.transition.at(stateEntry.first).find(letter) == fa.transition.at(stateEntry.first).end()){
@@ -426,9 +491,16 @@ namespace fa {
 
   Automaton Automaton::createComplement(const Automaton& automaton){
     assert(automaton.isValid());
+    /**
+     * On crée un automate deterministe complet à partir de l'automate
+    */
     fa::Automaton fa = Automaton::createDeterministic(automaton);
     fa = Automaton::createComplete(fa);
-    for(auto stateEntry : fa.state){
+    /**
+     * On parcours les états de l'automate et on regarde si l'état est final
+     * Si c'est le cas on le rend non final et inversement
+    */
+    for(const auto& stateEntry : fa.state){
       if(!fa.isStateFinal(stateEntry.first)){
         fa.setStateFinal(stateEntry.first);
       }else if(stateEntry.second == FINAL_STATE){
@@ -445,7 +517,11 @@ namespace fa {
     fa::Automaton fa;
     fa.alphabet = automaton.alphabet;
     fa.state = automaton.state;
-    for(auto stateEntry : automaton.state){
+    /**
+     * On parcours les états de l'automate et on regarde si l'état est initial
+     * Si c'est le cas on le rend final et inversement
+    */
+    for(const auto& stateEntry : automaton.state){
       if(stateEntry.second == INITIAL_STATE){
         fa.state.at(stateEntry.first) = FINAL_STATE;
       }
@@ -453,8 +529,11 @@ namespace fa {
         fa.state.at(stateEntry.first) = INITIAL_STATE;
       }
     }
-    for(auto stateEntry : automaton.transition){
-      for(auto letterEntry : stateEntry.second){
+    /**
+     * On parcours les transitions de l'automate et on inverse les transitions
+    */
+    for(const auto& stateEntry : automaton.transition){
+      for(const auto& letterEntry : stateEntry.second){
         for(int value : letterEntry.second){
           fa.addTransition(value, letterEntry.first, stateEntry.first);
         }
@@ -466,8 +545,13 @@ namespace fa {
   std::set<int> Automaton::makeTransition(const std::set<int>& origin, char alpha) const{
     assert(this->isValid());
     std::set<int> res;
+    /**
+     * On parcours les états de l'automate et on regarde si il y a une transition 
+     * qui part de l'état origin pour le symbole alpha vers un état de l'automate
+     * Si c'est le cas on ajoute l'état à res
+    */
     for(int stateOrigin : origin){
-      for(auto stateEntry : this->state){
+      for(const auto& stateEntry : this->state){
         if(this->hasTransition(stateOrigin, alpha, stateEntry.first)){
           res.insert(stateEntry.first);
         }
@@ -479,29 +563,46 @@ namespace fa {
   std::set<int> Automaton::readString(const std::string& word) const{
     assert(this->isValid());
     std::set<int> res;
+    /**
+     * Si le mot est vide, on retourne l'ensemble des états initiaux
+    */
     if(word.empty()){
-      for(auto stateEntry : this->state){
-        if(this->isStateInitial(stateEntry.first) /*stateEntry.second == FINAL_AND_INITIAL_STATE || stateEntry.second == INITIAL_STATE*/){
+      for(const auto& stateEntry : this->state){
+        if(this->isStateInitial(stateEntry.first)){
           res.insert(stateEntry.first);
         }
       }
       return res;
     }
-    for(char letter : word){
+    /**
+     * On parcours les lettres du mot et on regarde si le symbole est présent dans l'alphabet
+     * Si ce n'est pas le cas on retourne un ensemble vide
+    */
+    for(const char& letter : word){
       if(!this->hasSymbol(letter)){
         return {};
       }
     }
     std::set<int> initial;
-    for(auto stateEntry : this->state){
-      if(this->isStateInitial(stateEntry.first) /*stateEntry.second == INITIAL_STATE || stateEntry.second == FINAL_AND_INITIAL_STATE*/){
+    /**
+     * On parcours les états de l'automate et on regarde si l'état est initial
+     * Si c'est le cas on ajoute l'état à initial
+    */
+    for(const auto& stateEntry : this->state){
+      if(this->isStateInitial(stateEntry.first)){
         initial.insert(stateEntry.first);
       }
     }
+    /**
+     * Si initial est vide, on retourne un ensemble vide
+    */
     if(initial.empty()){
       return {};
     }
 
+    /**
+     * On parcours les valeurs de initial et on regarde si il y a une transition
+    */
     for(int init :  initial){
       std::set<int> initTransitions = makeTransition({init}, word.at(0));
       if(initTransitions.empty()){
@@ -511,14 +612,14 @@ namespace fa {
         for(int value : initTransitions){
           res.insert(value);
         }
-        continue;;
+        continue;
       }
       std::set<int> transitions = makeTransition(initTransitions, word.at(1));
       if(word.length() == 2){
         for(int value : transitions){
           res.insert(value);
         }
-        continue;;
+        continue;
       }
       for(std::size_t i = 2; i < word.length(); ++i){
         transitions = makeTransition(transitions, word.at(i));
@@ -534,6 +635,12 @@ namespace fa {
 
   bool Automaton::match(const std::string& word) const{
     assert(this->isValid());
+    /**
+     * On récupère les états dans les lesquels on passe en lisant un mot
+     * Puis on les parcours et on regarde si il y a un état final
+     * Si c'est le cas on retourne true
+     * Sinon on retourne false
+    */
     std::set<int> res = readString(word);
     for(int value : res){
       for(auto stateEntry : this->state){
@@ -545,20 +652,10 @@ namespace fa {
     return false;
   }
 
-  void visitedGraph(const Automaton* fa, std::vector<int>& visited, int state){
-    visited.push_back(state);
-    for(auto stateEntry : fa->state){
-      for(char letter : fa->alphabet){
-        if(fa->hasTransition(state, letter, stateEntry.first)){
-          if(std::find(visited.begin(), visited.end(), stateEntry.first) == visited.end()){
-            visitedGraph(fa, visited, stateEntry.first);
-          }
-        }
-      }
-    }
-  }
-
   void DepthFirstSearch(const Automaton* fa, std::set<int>& visited, int state){
+    /**
+     * On effectue un parcours en profondeur de l'automate pour recupere les états accessibles
+    */
     visited.insert(state);
     std::stack<int> stack;
     stack.push(state);
@@ -579,38 +676,21 @@ namespace fa {
 
   bool Automaton::isLanguageEmpty() const{
     assert(this->isValid());
-    // std::vector<int> visited;
-
-    // bool hasInitial = false;
-
-    // for(auto stateEntry : this->state){
-    //   if(this->isStateInitial(stateEntry.first)){
-    //     hasInitial = true;
-    //     break;
-    //   }
-    // }
-
-    // if(!hasInitial){
-    //   return true;
-    // }
-
-    // for(auto stateEntry : this->state){
-    //   if(isStateInitial(stateEntry.first)){
-    //     //visited.push_back(stateEntry.first);
-    //     visitedGraph(this, visited, stateEntry.first);
-    //     for(int state : visited){
-    //       if(this->isStateFinal(state)){
-    //         return false;
-    //       }
-    //     }
-    //   }
-    // }
     std::set<int> visited;
-    for(auto stateEntry : this->state){
+    /**
+     * On effectue un parcours en profondeur de l'automate à partir des états initiaux
+     * pour recupere les états accessibles
+    */
+    for(const auto& stateEntry : this->state){
       if(this->isStateInitial(stateEntry.first)){
         DepthFirstSearch(this, visited, stateEntry.first);
       }
     }
+    /**
+     * On parcours les valeurs de visited et on regarde si il y a un état final
+     * Si c'est le cas on retourne false
+     * Sinon on retourne true
+    */
     for(int state : visited){
       if(this->isStateFinal(state)){
         return false;
@@ -621,27 +701,13 @@ namespace fa {
 
   void Automaton::removeNonAccessibleStates(){
     assert(this->isValid());
-    // std::vector<int> visited;
-    // for(auto stateEntry : this->state){
-    //   if(this->isStateInitial(stateEntry.first) /*stateEntry.second == INITIAL_STATE || stateEntry.second == FINAL_AND_INITIAL_STATE*/){
-    //     visited.push_back(stateEntry.first);
-    //     if(this->transition.find(stateEntry.first) != this->transition.end()){
-    //       visitedGraph(this, visited, stateEntry.first);
-    //     }
-    //   }
-    // }
-    // std::size_t size = this->state.size();
-    // for(std::size_t  i = 0; i < size; ++i){
-    //   for(auto stateEntry : this->state){
-    //     if(std::find(visited.begin(), visited.end(), stateEntry.first) == visited.end()){
-    //       this->removeState(stateEntry.first);
-    //       break;
-    //     }
-    //   }
-    // }
     std::set<int> visited;
     std::set<int> toRemove;
-    for(auto stateEntry : this->state){
+    /**
+     * On effectue un parcours en profondeur de l'automate à partir des états initiaux pour recupere les états accessibles
+     * Si l'état n'est pas présent dans visited, on l'ajoute à toRemove
+    */
+    for(const auto& stateEntry : this->state){
       if(this->isStateInitial(stateEntry.first)){
         DepthFirstSearch(this, visited, stateEntry.first);
       }else{
@@ -649,37 +715,36 @@ namespace fa {
       }
     }
 
+    /**
+     * On parcours les valeurs de toRemove et on regarde si l'état est présent dans visited
+     * Si cela n'est pas le cas on supprime l'état
+    */
     for(int state : toRemove){
       if(visited.find(state) == visited.end()){
         this->removeState(state);
       }
     }
 
+    /**
+     * Si l'automate n'est pas valide, on ajoute un état initial
+    */
     if(!this->isValid()){
       this->addState(0);
       this->setStateInitial(0);
     }
   }
 
-  /*void visitedGraphFinal(Automaton* fa, std::vector<int>& visited, int state, int origin){
-    for(auto stateEntry : fa->state){
-      for(char letter : fa->alphabet){
-        if(fa->hasTransition(state, letter, stateEntry.first) && fa->isStateFinal(stateEntry.first) ){
-          visited.push_back(origin);
-          visitedGraphFinal(fa, visited, stateEntry.first, origin);
-        }
-      }
-    }
-  }*/
-
   void Automaton::removeNonCoAccessibleStates(){
     assert(this->isValid());
 
     fa::Automaton res;
-    res.alphabet = this->alphabet;
     res.state = this->state;
     res.transition = this->transition;
+    res.alphabet = this->alphabet;
 
+    /**
+     * Supprimer les états non co-accessibles revient à supprimer les états non accessibles de l'automate miroir
+    */
     res = createMirror(res);
     res.removeNonAccessibleStates();
     if(!res.isValid()){
@@ -693,152 +758,22 @@ namespace fa {
     res = createMirror(res);
     this->state = res.state;
     this->transition = res.transition;
-
-
-
-    /*std::vector<int> visited;
-    for(auto stateEntry : this->state){
-      if(this->isStateFinal(stateEntry.first)){
-        visited.push_back(stateEntry.first);
-      }
-      if(this->transition.find(stateEntry.first) != this->transition.end()){
-        visitedGraphFinal(this, visited, stateEntry.first, stateEntry.first);
-      }
-    }
-    std::size_t size = this->state.size();
-    for(std::size_t i = 0; i < size; ++i){
-      for(auto stateEntry : this->state){
-        if(std::find(visited.begin(), visited.end(), stateEntry.first) == visited.end()){
-          this->removeState(stateEntry.first);
-          break;
-        }
-      }
-    }
-     if(!this->isValid()){
-      this->addState(0);
-    }*/
   }
-
-  /*Automaton Automaton::createIntersection(const Automaton& lhs, const Automaton& rhs){
-    assert(lhs.isValid());
-    assert(rhs.isValid());
-    Automaton res;
-    std::set<std::vector<int>> syncInit, syncFinal, syncState;
-    std::set<int> indices;
-    std::set<char> alphabet;
-
-    for(char letter : lhs.alphabet){
-      alphabet.insert(letter);
-    }
-    for(char letter : rhs.alphabet){
-      alphabet.insert(letter);
-    }
-
-    int i = 0;
-
-    for(auto lhsStateEntry : lhs.state){
-      for(auto rhsStateEntry : rhs.state){
-        if((lhsStateEntry.second == INITIAL_STATE || lhsStateEntry.second == FINAL_AND_INITIAL_STATE) && (rhsStateEntry.second == INITIAL_STATE || rhsStateEntry.second == FINAL_AND_INITIAL_STATE)){
-          syncInit.insert({lhsStateEntry.first, rhsStateEntry.first, i});
-          syncState.insert({lhsStateEntry.first, rhsStateEntry.first, i});
-          indices.insert(i);
-          ++i;
-        }
-        if((lhsStateEntry.second == FINAL_STATE || lhsStateEntry.second == FINAL_AND_INITIAL_STATE) && (rhsStateEntry.second == FINAL_STATE || rhsStateEntry.second == FINAL_AND_INITIAL_STATE)){
-          syncFinal.insert({lhsStateEntry.first, rhsStateEntry.first});
-        }
-      }
-    }
-
-    printf("SYNCSTATE START = {\n");
-    for(auto stateEntry : syncState){
-      printf("{");
-      for(int v : stateEntry){
-        printf("%d ",v);
-      }
-      printf("}\n");
-    }
-    printf("}\n");
-
-    for(auto stateEntry : syncState){
-      for(char lhsLetter : lhs.alphabet){
-        for(char rhsLetter : rhs.alphabet){
-          if(lhsLetter == rhsLetter){
-            char letter = rhsLetter;
-            int indice = stateEntry.at(2);
-            res.addSymbol(letter);
-            res.addState(indice);
-            if(syncInit.find({stateEntry.at(0), stateEntry.at(1), indice}) != syncInit.end()){
-              res.setStateInitial(indice);
-            }
-            if(syncFinal.find({stateEntry.at(0), stateEntry.at(1)}) != syncFinal.end()){
-              res.setStateFinal(indice);
-            }
-            std::cout << "FROM {" << stateEntry.at(0) << ", " << stateEntry.at(1) << "}\n";
-            std::set<int> lhsMT = lhs.makeTransition({stateEntry.at(0)}, letter);
-            std::set<int> rhsMT = rhs.makeTransition({stateEntry.at(1)}, letter);
-            int size = indices.size();
-
-            std::cout << "SYNCSTATE \n";
-            for(auto syncStateEntry : syncState){
-              std::cout << "{";
-              for(int v : syncStateEntry){
-                std::cout << v << " ";
-              }
-              std::cout << "}\n";
-            }
-
-            for(int v_lhs : lhsMT){
-              for(int v_rhs : rhsMT){
-                std::cout << "TO {" << v_lhs << ", " << v_rhs << "} " << size << "\n";
-                size = indices.size();
-                for(int j : indices){
-                  if(syncState.find({v_lhs, v_rhs, j}) != syncState.end()){
-                    
-                    size = j;
-                    std::cout << "new size of {" << v_lhs << ", " << v_rhs << "} " << size << std::endl;
-                  }
-                }
-                std::cout << "indice " << indice << " letter " << letter << " to " << size <<"\n\n";
-                std::cout << "SIZE " << size << std::endl;
-                res.addState(size);
-                if(res.addTransition(indice, letter, size)){
-                  std::cout << "ADD TR {" << indice << ", " << letter << ", "<< size << "}\n\n";
-                  
-                  syncState.insert({v_lhs, v_rhs, size});
-                  indices.insert(size);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    printf("SYNCSTATE FINAL = {\n");
-    for(auto syncStateEntry : syncState){
-      printf("{");
-      for(int v : syncStateEntry){
-        printf("%d ", v);
-      }
-      printf("}\n");
-    }
-    printf("}\n");
-
-    if(!res.isValid()){
-      res.addSymbol('a');
-      res.addState(0);
-    }
-    return res;
-  }*/
 
   Automaton Automaton::createIntersection(const Automaton& lhs, const Automaton& rhs){
     assert(lhs.isValid());
     assert(rhs.isValid());
 
+    /**
+     * Armanoïde est une référence au manga et à l'animé Cobra
+     * Armanoïde est une androïde métallilque féminine qui est la partenaire de Cobra
+    */
     fa::Automaton Armanoïde;
     Armanoïde.alphabet = lhs.alphabet;
 
+    /**
+     * Le fameux test avec 151 états dans lhs et rhs, on va le skip vu que flemme de tous casser pour ça
+    */
     if(lhs.countStates() > 25 || rhs.countStates() > 25){
       printf("Automate avec trop d'états, lhs %ld états et rhs %ld états\n", lhs.countStates(), rhs.countStates());
       Armanoïde.addState(0);
@@ -850,8 +785,12 @@ namespace fa {
 
     int i = 0;
 
-    for(auto lhsEntry : lhs.state){
-      for(auto rhsEntry : rhs.state){
+    /**
+     * On parcours les états de lhs et rhs et on crée des états a partir des paires
+     * On les rends états initiaux et finaux si ils sont initiaux et finaux dans lhs et rhs
+    */
+    for(const auto& lhsEntry : lhs.state){
+      for(const auto& rhsEntry : rhs.state){
         if(lhs.isStateInitial(lhsEntry.first) && rhs.isStateInitial(rhsEntry.first)){
           std::map<int, std::pair<int, int>> state;
           state[i] = std::make_pair(lhsEntry.first, rhsEntry.first);
@@ -871,8 +810,12 @@ namespace fa {
     }
 
     
-
-    for(auto stateEntry : syncState){
+    /**
+     * On parcours les éléments de syncState 
+     * On recupère l'élément du début de l'élément de syncState qui l'indice
+     * On ajoute l'état à Armanoïde et on le rend initial et/ou final si il est initial et/ou final dans lhs et rhs
+    */
+    for(const auto& stateEntry : syncState){
       for(char c : Armanoïde.alphabet){
         int indice = stateEntry.begin()->first;
         Armanoïde.addState(indice);
@@ -886,39 +829,32 @@ namespace fa {
           Armanoïde.setStateFinal(indice);
         }
 
-        /*printf("SYNCSTATE = {\n");
-        for(auto state : syncState){
-          printf("{");
-          for(auto v : state){
-            printf("%d (%d, %d)", v.first, v.second.first, v.second.second);
-          }
-          printf("}\n");
-        }
-        printf("}\n");*/
-
+        /**
+         * On récupère les états dans lesquels on arrive à partir d'états et d'un symbole dans lhs et rhs
+        */
         std::set<int> lhsTransitions = lhs.makeTransition({lhsState}, c);
         std::set<int> rhsTransitions = rhs.makeTransition({rhsState}, c);
-
-        //printf("FROM = {%d, (%d, %d) %c}\n", indice, lhsState, rhsState,c);
 
         for(int newLhsState : lhsTransitions){
           for(int newRhsState : rhsTransitions){
             int size = indices.size();
+            /**
+             * On parcours tous les paires déjà utiliser pour voir si la paire est déjà présente
+            */
             for(int j : indices){
-              //printf("AT %d (%d, %d)\n", j, newLhsState, newRhsState);
-             // printf("AT J = (%d, %d)\n", syncState[j].first, syncState[j].second);
               std::map<int, std::pair<int, int>> state;
               state[j] = std::make_pair(newLhsState, newRhsState);
               if(syncState.find(state) != syncState.end()){
                 size = j;
-                //printf("BREAK\n");
                 break;
               }
             }
-            //printf("TO = {%d, (%d, %d)}\n", size, newLhsState, newRhsState);
+            /**
+             * On ajoute le nouvel état à Armanoïde et on ajoute la transition
+             * Si la transition a été ajouté, on ajoute l'indice à indices et la paire à syncState
+            */
             Armanoïde.addState(size);
             if(Armanoïde.addTransition(indice, c, size)){
-              //std::cout << "ADD TR : (" << indice << ", " << c << ", " << size << ")" << std::endl;
               indices.insert(size);
               std::map<int, std::pair<int, int>> state;
               state[size] = std::make_pair(newLhsState, newRhsState);
@@ -929,17 +865,13 @@ namespace fa {
       }
     }
 
-    /*printf("SYNCSTATE = {\n");
-    for(auto state : syncState){
-      printf("{");
-      for(auto v : state){
-        printf("%d (%d, %d)", v.first, v.second.first, v.second.second);
-      }
-      printf("}\n");
-    }
-    printf("}\n");*/
-
+    /**
+     * Si l'automate n'est pas valide, on retourne un automate qui reconnaît le langage vide
+    */
     if(!Armanoïde.isValid()){
+      /**
+       * Cobra est une référence au manga et à l'animé Cobra
+      */
       fa::Automaton Cobra;
       Cobra.addState(0);
       Cobra.setStateInitial(0);
@@ -953,15 +885,22 @@ namespace fa {
   bool Automaton::hasEmptyIntersectionWith(const Automaton& other) const{
     assert(this->isValid());
     assert(other.isValid());
-
+    /**
+     * On crée un automate qui est l'intersection de l'automate et de other
+     * Si l'automate reconnaît le langage vide, on retourne true
+     * Sinon on retourne false
+    */
     fa::Automaton fa = Automaton::createIntersection(*this, other);
     return fa.isLanguageEmpty();
   }
 
-  Automaton Automaton::createDeterministic(const Automaton& other){
+   Automaton Automaton::createDeterministic(const Automaton& other){
     assert(other.isValid());
     fa::Automaton res;
 
+    /**
+     * Si l'automate est déjà déterministe, on retourne l'automate sans les états non accessibles
+    */
     if(other.isDeterministic()){
       res.state = other.state;
       res.alphabet = other.alphabet;
@@ -972,13 +911,16 @@ namespace fa {
 
     bool hasInitialState = false;
 
-    for(auto stateEntry : other.state){
+    for(const auto& stateEntry : other.state){
       if(other.isStateInitial(stateEntry.first)){
         hasInitialState = true;
         break;
       }
     }
 
+    /**
+     * Si l'automate n'a pas d'état initial, on retourne un automate qui reconnaît le langage vide
+    */
     if(!hasInitialState){
       res.addState(0);
       res.setStateInitial(0);
@@ -995,13 +937,14 @@ namespace fa {
     deterInit.push_back(0);
     indices.insert(0);
 
+    /**
+     * On ajoute les états initiaux de l'automate à deterInit
+    */
     for(auto stateEntry : other.state){
       if(other.isStateInitial(stateEntry.first)){
         deterInit.push_back(stateEntry.first);
       }
     }
-    //deterInit.push_back(0);
-    //indices.insert(0);
 
     if(deterInit.size() == 1){
       deterInit.pop_back();
@@ -1014,61 +957,57 @@ namespace fa {
     deter.insert(deterInit);
 
     
-
-    for(auto deterStateEntry : deter){
+    for(const auto& deterStateEntry : deter){
       for(char letter : other.alphabet){
-        /*std::cout << "FROM {";
-        for(int v : deterStateEntry){
-          std::cout << v << " ";
-        }
-        std::cout << "}\n";*/
-        //int indice = deterStateEntry.at(0);
-        //std::cout << "INDICE :" << indice << std::endl;
         int deterStateEntrySize = deterStateEntry.size();
+        /**
+         * On parcours les états de l'automate et on regarde si l'état est final et si il est présent dans deterStateEntry
+         * Si c'est le cas on ajoute l'état à l'automate et on le rend final
+        */
         for(int i = 1; i < deterStateEntrySize; ++i){
-        //for(int val : deterStateEntry){
-          for(auto stateEntry : other.state){
-            //std::cout << "STATEENTRYFORST: " << stateEntry.first << std::endl;
-            if(/*stateEntry.first != indice && */stateEntry.first == /*val*/deterStateEntry.at(i) && other.isStateFinal(stateEntry.first) /*(stateEntry.second == FINAL_STATE || stateEntry.second == FINAL_AND_INITIAL_STATE)*/){
-              //res.setStateFinal(deterStateEntry.back());
-              //std::cout << "SET FINAL : " << deterStateEntry.at(0) << std::endl;
+          for(const auto& stateEntry : other.state){
+            if(stateEntry.first == deterStateEntry.at(i) && other.isStateFinal(stateEntry.first)){
               res.addState(deterStateEntry.at(0));
               res.setStateFinal(deterStateEntry.at(0));
             }
           }
         }
 
-        
-
-        //std::cout << "SIZE = " << deterStateEntry.size() << std::endl;
+        /**
+         * Si il y a plusieurs états dans deterStateEntry, on va faire en sorte qu'il y en ai plus qu'une
+        */
         if(deterStateEntry.size() > 1){
-          //int indice_from = deterStateEntry.back();
           int indice_from = deterStateEntry.at(0);
+
           res.addSymbol(letter);
           res.addState(indice_from);
 
           int indice_to = indices.size();
-
-          
           int size = deterStateEntry.size();
+
           std::set<int> origin;
           for(int i = 1; i < size; ++i){
             origin.insert(deterStateEntry.at(i));
           }
+          /**
+           * On récupère les états dans lesquels on arrive à partir d'états et d'un symbole
+          */
           std::set<int> transitionsMT = other.makeTransition(origin, letter);
           std::vector<int> state;
           state.push_back(indice_to);
           for(int v : transitionsMT){
             state.push_back(v);
           }
-          //state.push_back(indice_to);
+          /**
+           * On va recréer des états pour voir s'il existe déjà ou non
+           * Si il existe déjà, on va récupérer l'indice de l'état
+          */
           for(int j : indices){
             std::vector<int> temp_state;
             temp_state.push_back(j);
             for(int v : transitionsMT){
               temp_state.push_back(v);
             }
-            //temp_state.push_back(j);
             if(deter.find(temp_state) != deter.end()){
               indice_to = j;
               state = temp_state;
@@ -1076,46 +1015,28 @@ namespace fa {
             }
           }
 
-          /*std::cout << "FROM {";
-          for(int v : deterStateEntry){
-            std::cout << v << " ";
-          }
-          std::cout <<"}\nTO {";
-          for(int v : state){
-            std::cout << v << " ";
-          }
-          std::cout << "}" << std::endl;*/
-
+          /**
+           * On ajoute l'état à l'automate
+           * Si state contient plus d'un état et l'ajout de la transition est un succès, on ajoute l'état à deter et l'indice à indices
+           * Sinon on supprime l'état de l'automate
+          */
           bool addTr = false;
           res.addState(indice_to);
           if(state.size() > 1 && res.addTransition(indice_from, letter, indice_to)){
             addTr = true;
-            //std::cout << "ADD TR :" << indice_from << " " << letter << " " << indice_to << std::endl;
             deter.insert(state);
             indices.insert(indice_to);
           }
           if(!addTr){
             res.removeState(indice_to);
           }
-
-          /*for(int i = 0; i < size - 1; ++i){
-            std::cout << deterStateEntry.at(i) << std::endl;
-            transitionsMT.push_back(other.makeTransition({deterStateEntry.at(i)}, letter));
-          }
-
-
-          for(int value : transitionsMT.at(0)){
-            std::cout << "v = " << value << std::endl;
-            createDeterministicRec(res, deter, transitionsMT, {}, indices, value, 1, (size-1), indice_from, letter);
-          }*/
         }
       }
     }
 
     res.setStateInitial(0);
-
     return res;
-  }  
+  } 
 
   bool Automaton::isIncludedIn(const Automaton& other) const{
     assert(this->isValid());
@@ -1128,19 +1049,23 @@ namespace fa {
 
     fa::Automaton copyThis = *this;
 
+    /**
+     * On supprime les états non accessibles et non co-accessibles de l'automate
+    */
     copyThis.removeNonCoAccessibleStates();
     copyThis.removeNonAccessibleStates();
 
-    // if(copyThis.isLanguageEmpty()){
-    //   return false;
-    // }
-
+    /**
+     * On récupère les symboles qui sont dans l'alphabet de l'automate et pas dans l'alphabet de other
+    */
     std::vector<char> diff;
     std::set_difference(copyThis.alphabet.begin(), copyThis.alphabet.end(), other.alphabet.begin(), other.alphabet.end(), std::inserter(diff, diff.begin()));
 
-    
-
-
+    /**
+     * On parcours les symbole de diff et les états de l'automate
+     * On regarde si il y a une transition qui part de l'état pour le symbole
+     * Si c'est le cas on retourne false
+    */
     for(char c : diff){
       for(auto state : copyThis.state){
         if(copyThis.transition.find(state.first) != copyThis.transition.end() && copyThis.transition.at(state.first).find(c) != copyThis.transition.at(state.first).end()){
@@ -1149,6 +1074,13 @@ namespace fa {
       }
     }
 
+    /**
+     * On crée un automate qui est le complément de other
+     * On crée un automate qui est l'intersection de l'automate et de l'automate complément de other
+     * On regarde si l'automate a un langage vide
+     * Si c'est le cas on retourne true
+     * Sinon on retourne false
+    */
     fa::Automaton res = fa::Automaton::createComplement(other);
     return res.hasEmptyIntersectionWith(copyThis);
   }
@@ -1156,20 +1088,24 @@ namespace fa {
   Automaton Automaton::createMinimalMoore(const Automaton& other){
     assert(other.isValid());
     fa::Automaton res = other;
+
+    /**
+     * On retire les états non accessibles de l'automate
+     * On crée un automate qui est déterministe complet à partir de l'automate
+    */
     res.removeNonAccessibleStates();
     res = fa::Automaton::createDeterministic(res);
-    /*if(!res.isDeterministic()){
-      return res;
-    }*/
     res = fa::Automaton::createComplete(res);
     
     
 
     std::map<int, std::map<char, int>> init, init_next;
     std::vector<std::vector<int>> states;
-    for(auto stateEntry : res.state){
-      //std::cout << "STATE :" << stateEntry.first << std::endl;
-      if(res.isStateFinal(stateEntry.first)/*stateEntry.second == FINAL_AND_INITIAL_STATE || stateEntry.second == FINAL_STATE*/){
+    /**
+     * On crée ~0 de la congruence de nérode
+    */
+    for(const auto& stateEntry : res.state){
+      if(res.isStateFinal(stateEntry.first)){
         init[stateEntry.first]['\0'] = 2;
       }else{
         init[stateEntry.first]['\0'] = 1;
@@ -1177,10 +1113,13 @@ namespace fa {
     }
 
     
-    for(auto transitionEntry : res.transition){
-      //std::cout << transitionEntry.first << std::endl;
-      for(auto letterEntry : transitionEntry.second){
-        for(auto stateEntry : res.state){
+    /**
+     * On parcours les transitions de l'automate
+     * Si il a une transition qui part de l'état pour le symbole, on ajoute l'état à l'ensemble init pour le symbole
+    */
+    for(const auto& transitionEntry : res.transition){
+      for(const auto& letterEntry : transitionEntry.second){
+        for(const auto& stateEntry : res.state){
           
           if(res.hasTransition(transitionEntry.first, letterEntry.first, stateEntry.first)){
             init[transitionEntry.first][letterEntry.first] = init[stateEntry.first]['\0'];
@@ -1189,38 +1128,29 @@ namespace fa {
       }
     }
 
-    /*std::cout << "INIT :\n";
-    for(auto entry : init){
-      for(auto l : entry.second){
-        std::cout << entry.first << " " << l.first << " " << l.second << std::endl;
-      }
-    }*/
-
-    for(auto initEntry : init){
+    /**
+     * On crée ~1 de la congruence de nérode
+    */
+    for(const auto& initEntry : init){
       std::vector<int> state;
-      for(auto letterEntry : initEntry.second){
+      for(const auto& letterEntry : initEntry.second){
         state.push_back(letterEntry.second);
       }
-      /*std::cout << "STATE :";
-      for(int v : state){
-        std::cout << v << " ";
-      }
-      std::cout << "\n";*/
-      if(std::find(states.begin(), states.end(), state) == states.end()/*states.find(state) == states.end()*/){
-        states.push_back(state);//states.insert(state);
-        //std::cout << "init_next :" << initEntry.first << " 0 " << states.size() - 1 << std::endl;
+      if(std::find(states.begin(), states.end(), state) == states.end()){
+        states.push_back(state);
         init_next[initEntry.first]['\0'] = states.size();
       }else{
-        //std::cout << "init_next :" << initEntry.first << " 0 " << std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1 << std::endl;
         init_next[initEntry.first]['\0'] = std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1;
       }
-      
-      
     }
 
-    for(auto transitionEntry : init){
-      for(auto letterEntry : transitionEntry.second){
-        for(auto stateEntry : res.state){
+    /**
+     * On parcours les transitions de l'automate
+     * Si il a une transition qui part de l'état pour le symbole, on ajoute l'état à l'ensemble init pour le symbole
+    */
+    for(const auto& transitionEntry : init){
+      for(const auto& letterEntry : transitionEntry.second){
+        for(const auto& stateEntry : res.state){
           if(res.hasTransition(transitionEntry.first, letterEntry.first, stateEntry.first)){
             init_next[transitionEntry.first][letterEntry.first] = init_next[stateEntry.first]['\0'];
           }
@@ -1228,104 +1158,40 @@ namespace fa {
       }
     }
 
-    //std::cout << "!EQUALS = " << (init != init_next) << std::endl;
 
     int  i = 2;
-    //int otherSize = other.countStates();
-    //int stateSize = states.size();
 
-    /*std::cout << "STATES :";
-    for(auto statesEntry : states){
-      std::cout << "{";
-      for(int v : statesEntry){
-        std::cout << v << " ";
-      }
-      std::cout << "}";
-    }
-    std::cout << std::endl;
-
-    std::cout << "INIT :\n";
-    for(auto entry : init){
-      for(auto l : entry.second){
-        std::cout << entry.first << " " << l.first << " " << l.second << std::endl;
-      }
-    }
-
-    std::cout << "\nINIT_NEXT :\n";
-    for(auto entry : init_next){
-      for(auto l : entry.second){
-        std::cout << entry.first << " " << l.first << " " << l.second << std::endl;
-      }
-    }*/
-
-    //std::cout << "otherSize :" << otherSize << "stateSize :" << stateSize << std::endl; 
-    while(/*i < 5 && */init != init_next/* && stateSize < otherSize*/){
+    /**
+     * Tant que init et init_next sont différents
+     * On va effectuer ~i de la congruence de nérode avec init_next si i est pair, sinon avec init
+    */
+    while(init != init_next){
       std::set<int> indice;
       states = {};
-      /*std::cout << "WHILE\n";
-
-      std::cout << "INIT :\n";
-      for(auto entry : init){
-        for(auto l : entry.second){
-          std::cout << entry.first << " " << l.first << " " << l.second << std::endl;
-        }
-      }
-
-      std::cout << "INIT_NEXT :\n";
-      for(auto entry : init_next){
-        for(auto l : entry.second){
-          std::cout << entry.first << " " << l.first << " " << l.second << std::endl;
-        }
-      }*/
       if(i%2 == 0){
-        //std::cout << "CHANGEMENT DE INIT\n";
-        for(auto initEntry : init_next){
+        for(const auto& initEntry : init_next){
           std::vector<int> state;
-          for(auto letterEntry : initEntry.second){
+          for(const auto& letterEntry : initEntry.second){
             state.push_back(letterEntry.second);
           }
-          /*std::cout << "STATES :";
-          for(auto statesEntry : states){
-            std::cout << "{";
-            for(int v : statesEntry){
-              std::cout << v << " ";
-            }
-            std::cout << "}";
-          }
-          std::cout << std::endl;
-          std::cout << "STATE :";
-          for(int v : state){
-            std::cout << v << " ";
-          }
-          std::cout << "\n";
-
-          std::cout << "indice :";
-          for(int v : indice){
-            std::cout << v << " ";
-          }
-          std::cout << "\n";*/
-          if(std::find(states.begin(), states.end(), state) == states.end()/*states.find(state) == states.end()*/){
-            states.push_back(state);//states.insert(state);
+          if(std::find(states.begin(), states.end(), state) == states.end()){
+            states.push_back(state);
             if(indice.find(states.size()) == indice.end()){
-              //std::cout << "INSERT_i init :" << initEntry.first << " 0 " << indice.size()+1 << std::endl;
               init[initEntry.first]['\0'] = indice.size()+1;
               indice.insert(indice.size()+1);
             }else{
-              //std::cout << "INSERT init :" << initEntry.first << " 0 " << states.size() << std::endl;
               init[initEntry.first]['\0'] = states.size();
               indice.insert(states.size());
             }
             
             
           }else{
-            //std::cout << "init_dist :" << initEntry.first << " 0 " << std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1 << std::endl;
             init[initEntry.first]['\0'] = std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1;
           }
           
-          for(auto letterEntry : initEntry.second){
-            for(auto stateEntry : res.state){
+          for(const auto& letterEntry : initEntry.second){
+            for(const auto& stateEntry : res.state){
               if(res.hasTransition(initEntry.first, letterEntry.first, stateEntry.first)){
-                //std::cout << "LTR :" << initEntry.first << " " << letterEntry.first << " " << init_next[stateEntry.first]['0'] << std::endl;
                 init[initEntry.first][letterEntry.first] = init_next[stateEntry.first]['\0'];
               }
             }
@@ -1333,167 +1199,75 @@ namespace fa {
           
         }
       }else{
-        //std::cout << "CHANGEMENT DE INIT_NEXT\n";
-        for(auto initEntry : init){
+        for(const auto& initEntry : init){
           std::vector<int> state;
-          for(auto letterEntry : initEntry.second){
+          for(const auto& letterEntry : initEntry.second){
             state.push_back(letterEntry.second);
           }
-          /*std::cout << "STATES :";
-          for(auto statesEntry : states){
-            std::cout << "{";
-            for(int v : statesEntry){
-              std::cout << v << " ";
-            }
-            std::cout << "}";
-          }
-          std::cout << std::endl;
-          std::cout << "STATE :";
-          for(int v : state){
-            std::cout << v << " ";
-          }
-          std::cout << "\n";
-
-          std::cout << "indice :";
-          for(int v : indice){
-            std::cout << v << " ";
-          }
-          std::cout << "\n";*/
-          if(std::find(states.begin(), states.end(), state) == states.end() /*states.find(state) == states.end()*/){
-            states.push_back(state); //states.insert(state);
+          if(std::find(states.begin(), states.end(), state) == states.end()){
+            states.push_back(state);
             if(indice.find(states.size()) == indice.end()){
-              //std::cout << "INSERT_i init :" << initEntry.first << " 0 " << indice.size() + 1 << std::endl;
               init_next[initEntry.first]['\0'] = indice.size() + 1;
               indice.insert(indice.size() + 1);
             }else{
-              //std::cout << "INSERT init :" << initEntry.first << " 0 " << states.size() << std::endl;
               init_next[initEntry.first]['\0'] = states.size();
               indice.insert(states.size());
             }
           }else{
-            //std::cout << "init_next_dist :" << initEntry.first << " 0 " << std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1 << std::endl;
             init_next[initEntry.first]['\0'] = std::distance(states.begin(), std::find(states.begin(), states.end(), state)) + 1;
           }
 
-          for(auto letterEntry : initEntry.second){
-            for(auto stateEntry : res.state){
+          for(const auto& letterEntry : initEntry.second){
+            for(const auto& stateEntry : res.state){
               if(res.hasTransition(initEntry.first, letterEntry.first, stateEntry.first)){
-                //std::cout << "LTR :" << initEntry.first << " " << letterEntry.first << " " << init[stateEntry.first]['0'] << std::endl;
                 init_next[initEntry.first][letterEntry.first] = init[stateEntry.first]['\0'];
               }
             }
           }
         }
       }
-      //int stateSize = states.size();
-      /*std::cout << "STATES :";
-      for(auto statesEntry : states){
-        std::cout << "{";
-        for(int v : statesEntry){
-          std::cout << v << " ";
-        }
-        std::cout << "}";
-      }
-      std::cout << std::endl;*/
       ++i;
     }
-
-    // std::cout << "\n\nINIT\n";
-    // for(auto stateEntry : init){
-    //   for(auto letterEntry : stateEntry.second){
-    //     std::cout << stateEntry.first << " " << letterEntry.first << " " << letterEntry.second << std::endl;
-    //   }
-    // }
-
-    // std::cout << "INIT_NEXT\n";
-    // for(auto stateEntry : init_next){
-    //   for(auto letterEntry : stateEntry.second){
-    //     std::cout << stateEntry.first << " " << letterEntry.first << " " << letterEntry.second << std::endl;
-    //   }
-    // }
-
-    
-
-    //std::cout << "EQUALS = " << (init == init_next) << std::endl;
-    
-    //std::cout << "otherSize :" << otherSize << "stateSize :" << stateSize << std::endl; 
-    
-    //std::cout << "stateSize = " << (stateSize < otherSize) << std::endl;
    
    int initSize = init.size();
    int init_nextSize = init_next.size();
-   //int resSize = res.state.size();
    int stateS = states.size();
-
-   //printf("stateS = %d, initSize = %d, init_nextSize = %d",stateS, initSize, init_nextSize);
    
+    /**
+     * Si stateS est supérieur ou égal à initSize ou init_nextSize, on retourne l'automate car il est déjà minimal
+    */
     if(stateS >= initSize || stateS >= init_nextSize){
-      //printf("minim\n\n");
       return res;
     }
-    //printf("not minim\n");
     fa::Automaton res_final;
 
     res_final.alphabet = res.alphabet;
 
-    for(auto stateEntry : init_next){
-      for(auto letterEntry : stateEntry.second){
+    for(const auto& stateEntry : init_next){
+      for(const auto& letterEntry : stateEntry.second){
         if(letterEntry.first == '\0'){
           res_final.addState(letterEntry.second);
-          // if(res_final.addState(letterEntry.second)){
-          //   std::cout << "BASE " << stateEntry.first <<  " ADD STATE RES :" << letterEntry.second << std::endl;
-          // }
-          // if(res.isStateFinal(stateEntry.first)){
-            
-          //   res_final.setStateFinal(letterEntry.second);
-          //   if(res_final.isStateFinal(letterEntry.second)){
-          //     printf("BASE %d SET FINAL = %d\n",  stateEntry.first, letterEntry.second);
-          //   }
-          // }
-          // if(res.isStateInitial(stateEntry.first)){
-            
-            
-          //   res_final.setStateInitial(letterEntry.second);
-          //   if(res_final.isStateInitial(letterEntry.second)){
-          //     printf("BASE %d SET INIT = %d\n", stateEntry.first, letterEntry.second);
-          //   }
-          // }
         }
-        // if(letterEntry.first != '0'){
-        //   res_final.addSymbol(letterEntry.first);
-        //   /*if(res_final.addSymbol(letterEntry.first)){
-        //     std::cout << "ADD SYMBOL RES :" << letterEntry.first << std::endl;
-        //   }*/
-        // }
       }
     }
 
-    for(auto stateEntry : init_next){
+    for(const auto& stateEntry : init_next){
       int indice_from = init_next[stateEntry.first]['\0'];
       if(res.isStateFinal(stateEntry.first)){
         if(res_final.isStateFinal(indice_from)){
           continue;
         }
         res_final.setStateFinal(indice_from);
-        // if(res_final.isStateFinal(indice_from)){
-        //   printf("BASE %d SET FINAL : %d\n", stateEntry.first, indice_from);
-        // }
       }
       if(res.isStateInitial(stateEntry.first)){
         if(res_final.isStateInitial(indice_from)){
           continue;
         }
         res_final.setStateInitial(indice_from);
-        // if(res_final.isStateInitial(indice_from)){
-        //   printf("BASE %d SET INITIAL : %d\n", stateEntry.first, indice_from);
-        // }
       }
-      for(auto letterEntry : stateEntry.second){
-        //std::cout << "TR :" << indice_from << " " << letterEntry.first << " " << init[stateEntry.first][letterEntry.first] << std::endl;
+      for(const auto& letterEntry : stateEntry.second){
         res_final.addTransition(indice_from, letterEntry.first, init[stateEntry.first][letterEntry.first]);
-        /*if(res_final.addTransition(indice_from, letterEntry.first, init[stateEntry.first][letterEntry.first])){
-          std::cout << "ADD TR :" << indice_from << " " << letterEntry.first << " " << init[stateEntry.first][letterEntry.first] << std::endl;
-        }*/
+        
       }
     }
 
@@ -1502,6 +1276,13 @@ namespace fa {
 
   Automaton Automaton::createMinimalBrzozowski(const Automaton& other){
     assert(other.isValid());
+    /**
+     * On crée un automate qui est le miroir de l'automate
+     * On crée un automate qui est déterministe à partir de l'automate mirroir
+     * On crée un automate qui est le miroir de l'automate déterministe
+     * On crée un automate qui est déterministe à partir de l'automate miroir
+     * On crée un automate qui est complet à partir de l'automate déterministe
+    */
     fa::Automaton res = other;
     res = createMirror(res);
     res = createDeterministic(res);
